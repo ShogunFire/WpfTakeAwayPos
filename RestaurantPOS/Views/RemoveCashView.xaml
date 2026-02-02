@@ -1,0 +1,82 @@
+<UserControl x:Class="RestaurantPOS.Views.RemoveCashView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:RestaurantPOS.Views"
+             xmlns:controls="clr-namespace:RestaurantPOS.Views.Controls"
+             Background="{DynamicResource PageBackground}"
+             Foreground="{DynamicResource TextBlack}">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Left Navigation Menu -->
+        <local:BackofficeNavMenu Grid.Column="0"/>
+
+        <!-- Right Content Area -->
+        <Border Grid.Column="1" Padding="40">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="600">
+                <!-- Header -->
+                <TextBlock Text="➖ Remove Cash" 
+                           FontSize="32" 
+                           FontWeight="Bold" 
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,40"
+                           Foreground="{DynamicResource TextBlack}"/>
+
+                <!-- Reason Dropdown -->
+                <StackPanel Margin="0,0,0,30">
+                    <TextBlock Text="Removal Reason" 
+                               FontSize="16" 
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,12"
+                               Foreground="{DynamicResource TextBlack}"/>
+                    <ComboBox ItemsSource="{Binding RemovalReasons}"
+                              SelectedItem="{Binding SelectedRemovalReason}"
+                              Padding="12"
+                              FontSize="14"
+                              Height="50"
+                              Background="{DynamicResource BackgroundWhite}"
+                              Foreground="{DynamicResource TextBlack}"
+                              BorderBrush="{DynamicResource BorderMediumGray}"
+                              BorderThickness="1"
+                              VerticalContentAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Keypad Input -->
+                <controls:KeypadControl Margin="0,0,0,40"
+                                        UnitLabel="$"
+                                        IsPrefix="True"
+                                        Value="{Binding KeypadValue}"/>
+
+                <!-- Action Buttons -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" >
+                    <Button Content="Cancel" 
+                            Command="{Binding CancelCommand}"
+                            Padding="30,15"
+                            FontSize="18"
+                            FontWeight="SemiBold"
+                            Background="{DynamicResource DangerColor}"
+                            Foreground="White"
+                            BorderThickness="0"
+                            Cursor="Hand"
+                            Width="180"
+                            Height="60"/>
+                    
+                    <Button Content="Remove Cash" 
+                            Command="{Binding SubmitCommand}"
+                            Padding="30,15"
+                            FontSize="18"
+                            FontWeight="SemiBold"
+                            Background="#D32F2F"
+                            Foreground="White"
+                            BorderThickness="0"
+                            Cursor="Hand"
+                            Width="180"
+                            Height="60"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

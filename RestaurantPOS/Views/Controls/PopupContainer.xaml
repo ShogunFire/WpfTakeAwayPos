@@ -1,0 +1,23 @@
+<UserControl x:Class="RestaurantPOS.Views.Controls.PopupContainer"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Name="PopupContainerRoot">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+    </UserControl.Resources>
+
+    <Grid Background="#80000000"
+          Visibility="{Binding IsPopupOpen, ElementName=PopupContainerRoot, Converter={StaticResource BoolToVisibility}}">
+        <Border Background="{DynamicResource BackgroundWhite}"
+                CornerRadius="12"
+                Padding="30"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                MaxWidth="800">
+            <ContentPresenter Content="{Binding CurrentPopupViewModel, ElementName=PopupContainerRoot}"/>
+        </Border>
+    </Grid>
+</UserControl>

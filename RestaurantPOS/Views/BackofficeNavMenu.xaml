@@ -1,0 +1,43 @@
+<UserControl x:Class="RestaurantPOS.Views.BackofficeNavMenu"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             Background="{DynamicResource PageBackground}"
+             Foreground="{DynamicResource TextBlack}">
+    <Border Background="{DynamicResource SurfaceSecondary}" 
+            BorderBrush="{DynamicResource BorderMediumGray}" 
+            BorderThickness="0,0,1,0"
+            Padding="20">
+        <StackPanel>
+            <TextBlock Text="Backoffice" 
+                       FontSize="20" 
+                       FontWeight="Bold" 
+                       Margin="0,0,0,20"
+                       Foreground="{DynamicResource TextBlack}"/>
+            
+            <Button Content="➕ Add Cash" 
+                    Style="{StaticResource PrimaryButton}"
+                    Width="200"
+                    Height="50"
+                    Command="{Binding GoToAddCashCommand}"
+                    Margin="0,0,0,12"/>
+
+            <Button Content="➖ Remove Cash" 
+                    Style="{StaticResource PrimaryButton}"
+                    Width="200"
+                    Height="50"
+                    Background="#D32F2F"
+                    Command="{Binding GoToRemoveCashCommand}"
+                    Margin="0,0,0,20"/>
+
+            <Button Content="📦 Inventory" 
+                    Style="{StaticResource PrimaryButton}"
+                    Width="200"
+                    Height="50"
+                    Command="{Binding GoToInventoryCommand}"
+                    Visibility="{Binding InventoryModuleEnabled, Source={StaticResource FeatureService}, Converter={StaticResource BoolToVisibilityConverter}}"/>
+        </StackPanel>
+    </Border>
+</UserControl>

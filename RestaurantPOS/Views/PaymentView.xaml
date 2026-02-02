@@ -1,0 +1,209 @@
+<UserControl x:Class="RestaurantPOS.Views.PaymentView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:RestaurantPOS.ViewModels"
+    xmlns:converters="clr-namespace:RestaurantPOS.Resources.Converters"
+    xmlns:controls="clr-namespace:RestaurantPOS.Views.Controls"
+     Height="600" Width="800" 
+     Background="{DynamicResource BackgroundWhite}" 
+     Foreground="{DynamicResource TextBlack}">
+    <UserControl.Resources>
+        <converters:CashVisibilityConverter x:Key="CashVisibilityConverter"/>
+    </UserControl.Resources>
+
+    <Grid>
+        <!-- Main Content -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="380"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Panel - Keypad -->
+            <Border Grid.Column="0" 
+                    Background="{DynamicResource PaymentLeftPanelBackground}" 
+                    BorderBrush="{DynamicResource BorderMediumGray}" 
+                    BorderThickness="0,0,1,0" 
+                    Padding="15">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <controls:KeypadControl Grid.Row="0"
+                                            Margin="0,0,0,15"
+                                            UnitLabel="$"
+                                            IsPrefix="True"
+                                            Value="{Binding InputDisplay}"/>
+
+                    <!-- Payment Method Buttons -->
+                    <Grid Grid.Row="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Row="0" Grid.Column="0" 
+                                Content="💵 CASH" 
+                                FontSize="18" 
+                                FontWeight="Bold" 
+                                Background="{DynamicResource SuccessColor}" 
+                                Foreground="{DynamicResource TextBlack}" 
+                                Height="50" 
+                                Margin="5" 
+                                Command="{Binding CashPaymentCommand}"/>
+                        <Button Grid.Row="0" Grid.Column="1" 
+                                Content="💳 CARD" 
+                                FontSize="18" 
+                                FontWeight="Bold" 
+                                Background="{DynamicResource InfoColor}" 
+                                Foreground="{DynamicResource TextBlack}" 
+                                Height="50" 
+                                Margin="5" 
+                                Command="{Binding CardPaymentCommand}"/>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- Right Panel - Order Details -->
+            <Border Grid.Column="1" Padding="20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Order Summary -->
+                    <StackPanel Grid.Row="0" Margin="0,0,0,20">
+                        <Grid Margin="0,0,0,5">
+                            <TextBlock Text="Total:" 
+                                       FontSize="20" 
+                                       Foreground="{DynamicResource TextBlack}"/>
+                            <TextBlock Text="{Binding OrderSession.CurrentOrder.TotalAmount, StringFormat='${0:F2}'}" 
+                                       FontSize="16" 
+                                       FontWeight="Bold" 
+                                       Foreground="{DynamicResource TextBlack}"
+                                       HorizontalAlignment="Right"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Payment Entries -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding PaymentEntries}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="{DynamicResource BorderMediumGray}" 
+                                            BorderThickness="0,0,0,1" 
+                                            Padding="0,10" 
+                                            Margin="0,5">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+
+                                            <!-- Payment Method and Amount -->
+                                            <Grid Grid.Row="0">
+                                                <TextBlock Text="{Binding PaymentMethod}" 
+                                                           FontWeight="Bold" 
+                                                           FontSize="14" 
+                                                           Foreground="{DynamicResource TextBlack}"/>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                    <TextBlock Text="{Binding Amount, StringFormat='${0:F2}'}" 
+                                                               FontWeight="Bold" 
+                                                               FontSize="16" 
+                                                               Foreground="{DynamicResource TextBlack}"
+                                                               Margin="0,0,10,0"/>
+                                                    <Button Content="✕" 
+                                                            Width="30" 
+                                                            Height="30" 
+                                                            FontSize="16" 
+                                                            Background="{DynamicResource TransparentBrush}" 
+                                                            Foreground="{DynamicResource DangerColor}" 
+                                                            BorderThickness="0"
+                                                            Command="{Binding DataContext.RemovePaymentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <!-- Paid, Remaining, and Change Summary -->
+                    <StackPanel Grid.Row="2" Margin="0,20,0,20">
+                        <Separator Margin="0,0,0,10" Background="{DynamicResource BorderMediumGray}"/>
+                        
+                        <Grid Margin="0,0,0,5">
+                            <TextBlock Text="Paid:" 
+                                       FontSize="20" 
+                                       Foreground="{DynamicResource TextBlack}"/>
+                            <TextBlock Text="{Binding OrderSession.CurrentOrder.TotalPaid, StringFormat='${0:F2}'}" 
+                                       FontSize="20" 
+                                       FontWeight="Bold" 
+                                       Foreground="{DynamicResource TextBlack}" 
+                                       HorizontalAlignment="Right"/>
+                        </Grid>
+                        
+                        <Separator Margin="0,10" Background="{DynamicResource BorderMediumGray}"/>
+                        
+                        <Grid Margin="0,0,0,5">
+                            <TextBlock Text="Remaining:" 
+                                       FontSize="20" 
+                                       Foreground="{DynamicResource TextBlack}"/>
+                            <TextBlock Text="{Binding OrderSession.CurrentOrder.Remaining, StringFormat='${0:F2}'}" 
+                                       FontSize="20" 
+                                       FontWeight="Bold" 
+                                       Foreground="{DynamicResource ErrorColor}" 
+                                       HorizontalAlignment="Right"/>
+                        </Grid>
+
+                        <Separator Margin="0,10" Background="{DynamicResource BorderMediumGray}"/>
+                        
+                        <Grid Margin="0,0,0,0">
+                            <TextBlock Text="Change:" 
+                                       FontSize="20" 
+                                       Foreground="{DynamicResource TextBlack}"/>
+                            <TextBlock Text="{Binding OrderSession.CurrentOrder.TotalChange, StringFormat='${0:F2}'}" 
+                                       FontSize="20" 
+                                       FontWeight="Bold" 
+                                       Foreground="{DynamicResource TextBlack}"
+                                       HorizontalAlignment="Right"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Action Buttons -->
+                    <Grid Grid.Row="3" Margin="0,0,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0" 
+                                Content="Back to order" 
+                                Style="{StaticResource DangerButton}"
+                                Height="60" 
+                                Margin="0,0,10,0" 
+                                Command="{Binding BackToOrderCommand}"/>
+                        <Button Grid.Column="1" 
+                                Content="Complete Order" 
+                                Style="{StaticResource PrimaryButton}"
+                                Height="60" 
+                                Margin="10,0,0,0" 
+                                Command="{Binding CompleteOrderCommand}"/>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

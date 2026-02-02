@@ -1,0 +1,32 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- Light Theme Colors -->
+    <Color x:Key="ClickBackgroundBlueColor">#E3F2FD</Color>
+    <Color x:Key="HoverBackgroundGrayColor">#F5F5F5</Color>
+    
+    <SolidColorBrush x:Key="PageBackground">#F8F9FA</SolidColorBrush>
+    <SolidColorBrush x:Key="PrimaryColor">#2D9CFF</SolidColorBrush>
+    <SolidColorBrush x:Key="PrimaryHoverColor">#1E88E5</SolidColorBrush>
+    <SolidColorBrush x:Key="DangerColor">#E74C3C</SolidColorBrush>
+    <SolidColorBrush x:Key="BackgroundWhite">White</SolidColorBrush>
+    <SolidColorBrush x:Key="BorderLightGray">#E6E6E6</SolidColorBrush>
+    <SolidColorBrush x:Key="BorderMediumGray">#E0E0E0</SolidColorBrush>
+    <SolidColorBrush x:Key="HoverBackgroundGray">#F5F5F5</SolidColorBrush>
+    <SolidColorBrush x:Key="ClickBackgroundBlue">#E3F2FD</SolidColorBrush>
+    <SolidColorBrush x:Key="TextDarkGray">#666</SolidColorBrush>
+    <SolidColorBrush x:Key="TextMediumGray">#333</SolidColorBrush>
+    <SolidColorBrush x:Key="TextBlack">Black</SolidColorBrush>
+    <SolidColorBrush x:Key="PriceBlue">#1976D2</SolidColorBrush>
+    <SolidColorBrush x:Key="PressedOverlay">#22000000</SolidColorBrush>
+    <SolidColorBrush x:Key="TransparentBrush">Transparent</SolidColorBrush>
+    
+    <!-- Payment View Colors -->
+    <SolidColorBrush x:Key="PaymentLeftPanelBackground">#F9F9F9</SolidColorBrush>
+    <SolidColorBrush x:Key="PaymentInputBackground">#E8E8E8</SolidColorBrush>
+    <SolidColorBrush x:Key="SuccessColor">#4CAF50</SolidColorBrush>
+    <SolidColorBrush x:Key="InfoColor">#2196F3</SolidColorBrush>
+    <SolidColorBrush x:Key="ErrorColor">#F44336</SolidColorBrush>
+    <SolidColorBrush x:Key="SecondaryButtonColor">#9E9E9E</SolidColorBrush>
+    
+</ResourceDictionary>
