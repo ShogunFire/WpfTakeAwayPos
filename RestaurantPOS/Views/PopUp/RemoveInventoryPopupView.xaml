@@ -1,7 +1,9 @@
 <UserControl x:Class="RestaurantPOS.Views.RemoveInventoryPopupView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:controls="clr-namespace:RestaurantPOS.Views.Controls">
+             xmlns:controls="clr-namespace:RestaurantPOS.Views.Controls"
+             xmlns:converters="clr-namespace:RestaurantPOS.Resources.Converters"
+             xmlns:models="clr-namespace:RestaurantPOS.Models">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -25,27 +27,10 @@
             </TextBlock.Text>
         </TextBlock>
 
-        <!-- Quantity Input -->
-        <StackPanel Grid.Row="1" Margin="0,0,0,20">
-            <TextBlock Text="Quantity" 
-                       FontSize="14" 
-                       FontWeight="SemiBold"
-                       Margin="0,0,0,8"
-                       Foreground="{DynamicResource TextDarkGray}"/>
-            <Border BorderBrush="{DynamicResource BorderMediumGray}" 
-                    BorderThickness="2" 
-                    CornerRadius="8" 
-                    Padding="12" 
-                    Background="{DynamicResource BackgroundWhite}">
-                <TextBlock Text="{Binding Quantity}"
-                           FontSize="18"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource TextBlack}"/>
-            </Border>
-        </StackPanel>
+        
 
         <!-- Reason Selection -->
-        <StackPanel Grid.Row="2" Margin="0,0,0,20">
+        <StackPanel Grid.Row="1" Margin="0,0,0,20">
             <TextBlock Text="Reason for Removal" 
                        FontSize="14" 
                        FontWeight="SemiBold"
@@ -53,22 +38,24 @@
                        Foreground="{DynamicResource TextDarkGray}"/>
             <ListBox ItemsSource="{Binding RemovalReasons}"
                      SelectedItem="{Binding SelectedRemovalReason}"
-                     Height="120"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
                         <StackPanel/>
                     </ItemsPanelTemplate>
                 </ListBox.ItemsPanel>
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding}" 
-                                   Padding="8"
-                                   FontSize="14"/>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
+                
             </ListBox>
         </StackPanel>
+
+        <!-- Quantity Input -->
+        <controls:KeypadInputBox Grid.Row="2"
+                         Label="Quantity"
+                         DisplayValue="{Binding Quantity}"
+                         Target="{x:Static models:KeypadTarget.Quantity}"
+                         ActiveTarget="{Binding ActiveTarget}"
+                         ActivateCommand="{Binding SetTargetCommand}"
+                         Margin="0,0,0,20"/>
 
         <!-- Keypad -->
         <controls:KeypadControl Grid.Row="3"

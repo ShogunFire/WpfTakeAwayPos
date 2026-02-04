@@ -106,6 +106,7 @@ namespace RestaurantPOS.ViewModels
         [RelayCommand]
         private void BackToOrder()
         {
+            InputDisplay = "0";
             _navigationService.Navigate<OrderEntryViewModel>();
         }
 

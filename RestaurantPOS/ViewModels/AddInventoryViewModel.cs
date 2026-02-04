@@ -5,13 +5,6 @@ using RestaurantPOS.Services.Interfaces;
 
 namespace RestaurantPOS.ViewModels
 {
-    public enum KeypadTarget
-    {
-        None,
-        Quantity,
-        TotalCost
-    }
-
     public partial class AddInventoryViewModel : BaseViewModel
     {
         private readonly IInventoryService _inventoryService;
