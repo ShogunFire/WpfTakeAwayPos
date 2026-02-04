@@ -17,19 +17,11 @@
                        Margin="0,0,0,20"
                        Foreground="{DynamicResource TextBlack}"/>
             
-            <Button Content="➕ Add Cash" 
+            <Button Content="💰 Cash Control" 
                     Style="{StaticResource PrimaryButton}"
                     Width="200"
                     Height="50"
-                    Command="{Binding GoToAddCashCommand}"
-                    Margin="0,0,0,12"/>
-
-            <Button Content="➖ Remove Cash" 
-                    Style="{StaticResource PrimaryButton}"
-                    Width="200"
-                    Height="50"
-                    Background="#D32F2F"
-                    Command="{Binding GoToRemoveCashCommand}"
+                    Command="{Binding GoToCashControlCommand}"
                     Margin="0,0,0,20"/>
 
             <Button Content="📦 Inventory" 

@@ -52,8 +52,8 @@ namespace RestaurantPOS
             services.AddSingleton<RemoveInventoryViewModel>();
             services.AddSingleton<BackofficeNavMenuViewModel>();
             services.AddSingleton<EndShiftViewModel>();
-            services.AddSingleton<AddCashViewModel>();
-            services.AddSingleton<RemoveCashViewModel>();
+            services.AddSingleton<CashControlViewModel>();
+            services.AddSingleton<StepPopupViewModel>();
             services.AddSingleton<TopBarViewModel>();
 
         

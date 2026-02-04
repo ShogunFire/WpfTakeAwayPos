@@ -3,143 +3,58 @@ using CommunityToolkit.Mvvm.Input;
 using RestaurantPOS.Models;
 using RestaurantPOS.Services.Interfaces;
 using System.Collections.ObjectModel;
-using System.Linq;
 
 namespace RestaurantPOS.ViewModels
 {
+    public enum CashFlowType
+    {
+        Add,
+        Remove
+    }
+
     public partial class CashControlViewModel : BaseViewModel
     {
-        private readonly INavigationService _navigationService;
         private readonly ICashControlService _cashControlService;
+        private readonly IPopupService _popupService;
+        private readonly IDialogService _dialogService;
+        private readonly StepPopupViewModel _stepPopupViewModel;
 
         [ObservableProperty]
-        private decimal keypadValue;
+        private ObservableCollection<CashTransaction> transactions = new();
 
-        [ObservableProperty]
-        private decimal expectedCash;
-
-        [ObservableProperty]
-        private decimal countedCash;
-
-        [ObservableProperty]
-        private decimal difference;
-
-        [ObservableProperty]
-        private decimal openingFloat;
-
-        [ObservableProperty]
-        private bool isCounted;
-
-        [ObservableProperty]
-        private bool isKeypadOpen;
-
-        [ObservableProperty]
-        private string popupMode; // "EndShift", "RemoveCash", "AddCash"
-
-        [ObservableProperty]
-        private string selectedRemovalReason;
-
-        [ObservableProperty]
-        private ObservableCollection<string> removalReasons = new() 
-        { 
-            "Bank Deposit", 
-            "Petty Cash", 
-            "Change Fund", 
-            "Safe Drop",
-            "Other" 
-        };
-
-        public CashControlViewModel(INavigationService navigationService, ICashControlService cashControlService)
+        public CashControlViewModel(ICashControlService cashControlService, IPopupService popupService, IDialogService dialogService, StepPopupViewModel stepPopupViewModel)
         {
-            _navigationService = navigationService;
             _cashControlService = cashControlService;
-            
-            RefreshData();
+            _popupService = popupService;
+            _dialogService = dialogService;
+            _stepPopupViewModel = stepPopupViewModel;
+
+            RefreshTransactions();
         }
 
         [RelayCommand]
-        private void ShowEndShiftPopup()
+        private void AddCash()
         {
-            PopupMode = "EndShift";
-            KeypadValue = 0;
-            IsKeypadOpen = true;
+            StartCashFlow(CashFlowType.Add);
         }
 
         [RelayCommand]
-        private void ShowRemoveCashPopup()
+        private void RemoveCash()
         {
-            PopupMode = "RemoveCash";
-            KeypadValue = 0;
-            SelectedRemovalReason = null;
-            IsKeypadOpen = true;
+            StartCashFlow(CashFlowType.Remove);
         }
 
-        [RelayCommand]
-        private void ShowAddCashPopup()
+        private void StartCashFlow(CashFlowType flowType)
         {
-            PopupMode = "AddCash";
-            KeypadValue = 0;
-            IsKeypadOpen = true;
+            var flow = new CashFlowWizardViewModel(_cashControlService, _dialogService, flowType, RefreshTransactions);
+            _stepPopupViewModel.Initialize(flow);
+            _popupService.Show<StepPopupViewModel>();
         }
 
-        [RelayCommand]
-        private void CloseKeypad()
+        private void RefreshTransactions()
         {
-            IsKeypadOpen = false;
-            KeypadValue = 0;
-            SelectedRemovalReason = null;
-        }
-
-        [RelayCommand(CanExecute = nameof(CanConfirm))]
-        private void Confirm()
-        {
-            switch (PopupMode)
-            {
-                case "EndShift":
-                    _cashControlService.SetActualCash(KeypadValue);
-                    break;
-                case "RemoveCash":
-                    if (!string.IsNullOrWhiteSpace(SelectedRemovalReason))
-                    {
-                        _cashControlService.RemoveCash(KeypadValue, SelectedRemovalReason);
-                    }
-                    break;
-                case "AddCash":
-                    _cashControlService.AddCash(KeypadValue, "Cash Addition");
-                    break;
-            }
-
-            RefreshData();
-            CloseKeypad();
-        }
-
-        private bool CanConfirm()
-        {
-            if (KeypadValue <= 0) return false;
-
-            if (PopupMode == "RemoveCash" && string.IsNullOrWhiteSpace(SelectedRemovalReason))
-                return false;
-
-            return true;
-        }
-
-        partial void OnKeypadValueChanged(decimal value)
-        {
-            ConfirmCommand.NotifyCanExecuteChanged();
-        }
-
-        partial void OnSelectedRemovalReasonChanged(string value)
-        {
-            ConfirmCommand.NotifyCanExecuteChanged();
-        }
-
-        private void RefreshData()
-        {
-            OpeningFloat = _cashControlService.OpeningFloat;
-            ExpectedCash = _cashControlService.ExpectedCash;
-            IsCounted = _cashControlService.IsCounted;
-            CountedCash = _cashControlService.ActualCash;
-            Difference = _cashControlService.Difference;
+            var trans = _cashControlService.GetTransactions();
+            Transactions = new ObservableCollection<CashTransaction>(trans);
         }
     }
 }

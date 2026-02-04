@@ -24,11 +24,8 @@
             <DataTemplate DataType="{x:Type vm:PaymentViewModel}">
                 <views:PaymentView/>
             </DataTemplate>
-            <DataTemplate DataType="{x:Type vm:AddCashViewModel}">
-                <views:AddCashView/>
-            </DataTemplate>
-            <DataTemplate DataType="{x:Type vm:RemoveCashViewModel}">
-                <views:RemoveCashView/>
+            <DataTemplate DataType="{x:Type vm:CashControlViewModel}">
+                <views:CashControlView/>
             </DataTemplate>
             <DataTemplate DataType="{x:Type vm:EndShiftViewModel}">
                 <views:EndShiftPopupView/>
@@ -38,6 +35,12 @@
             </DataTemplate>
             <DataTemplate DataType="{x:Type vm:RemoveInventoryViewModel}">
                 <views:RemoveInventoryPopupView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:StepPopupViewModel}">
+                <views:StepPopupView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:CashFlowWizardViewModel}">
+                <views:CashFlowStepContentView/>
             </DataTemplate>
        
         </ResourceDictionary>

@@ -1,0 +1,107 @@
+<UserControl x:Class="RestaurantPOS.Views.StepPopupView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:RestaurantPOS.Views.Controls">
+    <Grid x:Name="Root">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Step Progress Header -->
+        <Border Grid.Row="0"
+                Background="Transparent"
+                Padding="0"
+                BorderBrush="{DynamicResource BorderMediumGray}"
+                BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Title and Description -->
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding StepTitle}"
+                               FontSize="24"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource TextBlack}"/>
+                    <TextBlock Text="{Binding StepDescription}"
+                               FontSize="13"
+                               Foreground="{DynamicResource TextDarkGray}"
+                               Margin="0,8,0,10"/>
+                </StackPanel>
+
+                <!-- Step Counter -->
+                <StackPanel Grid.Column="1"
+                           Orientation="Horizontal"
+                           VerticalAlignment="Center"
+                           Margin="20,0,0,0">
+                    <TextBlock Text="{Binding CurrentStepNumber}"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource PrimaryColor}"/>
+                    <TextBlock Text=" / "
+                               FontSize="16"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource TextDarkGray}"/>
+                    <TextBlock Text="{Binding TotalSteps}"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource TextDarkGray}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Step Progress Bar -->
+        <ProgressBar Grid.Row="1"
+                     Background="Transparent"
+                     Foreground="{DynamicResource PrimaryColor}"
+                     Height="4"
+                     Maximum="1"
+                     Value="{Binding Progress, Mode=OneWay}"
+                     Margin="0,0,0,20"/>
+
+        <!-- Step Content Area -->
+        <ContentPresenter Grid.Row="2"
+                          Content="{Binding Flow}"
+                          Margin="0"/>
+
+
+        <!-- Navigation Buttons -->
+        <StackPanel Grid.Row="3"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Stretch"
+                    Margin="0,20,0,20">
+            <Button Content="{Binding BackButtonText}"
+                    Command="{Binding BackOrCancelCommand}"
+                    IsEnabled="{Binding CanGoBack}"
+                    Padding="25,15"
+                    FontSize="16"
+                    FontWeight="SemiBold"
+                    Background="{DynamicResource DangerColor}"
+                    Foreground="White"
+                    BorderThickness="0"
+                    Cursor="Hand"
+                    Height="60"
+                    Margin="0,0,12,0"
+                    Width="150"/>
+
+            <Button Content="{Binding NextButtonText}"
+                    Command="{Binding NextCommand}"
+                    IsEnabled="{Binding CanGoNext}"
+                    Padding="25,15"
+                    FontSize="16"
+                    FontWeight="SemiBold"
+                    Background="{DynamicResource SuccessColor}"
+                    Foreground="White"
+                    BorderThickness="0"
+                    Cursor="Hand"
+                    Height="60"
+                    HorizontalAlignment="Right"
+                    Width="150"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

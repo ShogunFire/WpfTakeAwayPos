@@ -14,6 +14,8 @@
             <local:DineInVisibilityConverter x:Key="DineInVisibilityConverter"/>
             <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
             <local:NumberSignConverter x:Key="NumberSignConverter"/>
+            <converters:CashTransactionTypeToSignConverter x:Key="CashTransactionTypeToSignConverter"/>
+            <converters:CashTransactionTypeToColorConverter x:Key="CashTransactionTypeToColorConverter"/>
 
 
             <!-- Global ListBox Styles -->

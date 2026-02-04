@@ -1,0 +1,158 @@
+<UserControl x:Class="RestaurantPOS.Views.CashControlView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:RestaurantPOS.Views"
+             Background="{DynamicResource PageBackground}"
+             Foreground="{DynamicResource TextBlack}">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Left Navigation Menu -->
+        <local:BackofficeNavMenu Grid.Column="0"/>
+
+        <!-- Right Content Area -->
+        <Border Grid.Column="1" Padding="40">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <TextBlock Grid.Row="0"
+                           Text="💰 Cash Control"
+                           FontSize="32"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource TextBlack}"
+                           Margin="0,0,0,20"/>
+
+                <!-- Action Buttons -->
+                <StackPanel Grid.Row="1"
+                           Orientation="Horizontal"
+                           HorizontalAlignment="Left"
+                           Margin="0,0,0,30">
+                    <Button Content="➕ Add Cash"
+                            Command="{Binding AddCashCommand}"
+                            Padding="30,15"
+                            FontSize="18"
+                            FontWeight="SemiBold"
+                            Background="{DynamicResource SuccessColor}"
+                            Foreground="White"
+                            BorderThickness="0"
+                            Cursor="Hand"
+                            Width="200"
+                            Height="60"
+                            Margin="0,0,20,0"/>
+
+                    <Button Content="➖ Remove Cash"
+                            Command="{Binding RemoveCashCommand}"
+                            Padding="30,15"
+                            FontSize="18"
+                            FontWeight="SemiBold"
+                            Background="#D32F2F"
+                            Foreground="White"
+                            BorderThickness="0"
+                            Cursor="Hand"
+                            Width="200"
+                            Height="60"/>
+                </StackPanel>
+
+                <!-- Divider -->
+                <Border Grid.Row="2"
+                        Height="1"
+                        Background="{DynamicResource BorderMediumGray}"
+                        Margin="0,0,0,20"/>
+
+                <!-- Transactions List -->
+                <Grid Grid.Row="3">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- List Header -->
+                    <TextBlock Grid.Row="0"
+                               Text="Cash Movements"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource TextBlack}"
+                               Margin="0,0,0,16"/>
+
+                    <!-- Transactions ScrollViewer -->
+                    <ScrollViewer Grid.Row="1"
+                                 VerticalScrollBarVisibility="Auto"
+                                 HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding Transactions}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="{DynamicResource BorderMediumGray}"
+                                           BorderThickness="1"
+                                           CornerRadius="8"
+                                           Padding="20"
+                                           Background="{DynamicResource SurfaceSecondary}"
+                                           Margin="0,0,0,12">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Transaction Details -->
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Description}"
+                                                          FontSize="16"
+                                                          FontWeight="Bold"
+                                                          Foreground="{DynamicResource TextBlack}"/>
+                                                <TextBlock Text="{Binding Timestamp, StringFormat='dd/MM/yyyy HH:mm:ss'}"
+                                                          FontSize="12"
+                                                          Foreground="{DynamicResource TextDarkGray}"
+                                                          Margin="0,4,0,0"/>
+                                            </StackPanel>
+
+                                            <!-- Reason -->
+                                            <TextBlock Grid.Column="1"
+                                                      Text="{Binding Reason}"
+                                                      FontSize="14"
+                                                      Foreground="{DynamicResource TextDarkGray}"
+                                                      VerticalAlignment="Center"
+                                                      Margin="20,0,0,0"/>
+
+                                            <!-- Spacer -->
+                                            <Border Grid.Column="2" Width="20"/>
+
+                                            <!-- Amount -->
+                                            <TextBlock Grid.Column="3"
+                                                      FontSize="18"
+                                                      FontWeight="Bold"
+                                                      VerticalAlignment="Center"
+                                                      Foreground="{Binding Type, Converter={StaticResource CashTransactionTypeToColorConverter}}">
+                                                <TextBlock.Text>
+                                                    <MultiBinding StringFormat="'{0}{1:F2}'">
+                                                        <Binding Path="Type" Converter="{StaticResource CashTransactionTypeToSignConverter}"/>
+                                                        <Binding Path="Amount"/>
+                                                    </MultiBinding>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

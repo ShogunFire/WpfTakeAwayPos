@@ -20,15 +20,9 @@ namespace RestaurantPOS.ViewModels
         }
 
         [RelayCommand]
-        private void GoToAddCash()
+        private void GoToCashControl()
         {
-            _navigationService.Navigate<AddCashViewModel>();
-        }
-
-        [RelayCommand]
-        private void GoToRemoveCash()
-        {
-            _navigationService.Navigate<RemoveCashViewModel>();
+            _navigationService.Navigate<CashControlViewModel>();
         }
     }
 }

@@ -22,7 +22,7 @@ namespace RestaurantPOS.ViewModels
         [RelayCommand]
         private void GoToBackoffice()
         {
-            _navigationService.Navigate<AddCashViewModel>();
+            _navigationService.Navigate<CashControlViewModel>();
         }
     }
 }
