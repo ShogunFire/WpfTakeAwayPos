@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using RestaurantPOS.Models;
 using RestaurantPOS.Services.Interfaces;
 using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace RestaurantPOS.ViewModels
 {
@@ -53,7 +54,8 @@ namespace RestaurantPOS.ViewModels
 
         private void RefreshTransactions()
         {
-            var trans = _cashControlService.GetTransactions();
+            var trans = _cashControlService.GetTransactions()
+                .Where(t => t.Type != CashTransactionType.Sale);
             Transactions = new ObservableCollection<CashTransaction>(trans);
         }
     }

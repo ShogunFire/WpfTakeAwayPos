@@ -4,6 +4,7 @@ namespace RestaurantPOS.Models
 {
     public class CashTransaction
     {
+        public long? ShiftId { get; set; }
         public DateTime Timestamp { get; set; }
         public CashTransactionType Type { get; set; }
         public decimal Amount { get; set; }

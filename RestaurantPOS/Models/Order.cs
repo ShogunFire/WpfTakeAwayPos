@@ -10,6 +10,7 @@ namespace RestaurantPOS.Models
     public partial class Order : ObservableObject
     {
         [ObservableProperty] private int orderId;
+        [ObservableProperty] private long? shiftId;
         [ObservableProperty] private decimal subtotal;
         [ObservableProperty] private decimal tax;
         [ObservableProperty] private decimal totalAmount;

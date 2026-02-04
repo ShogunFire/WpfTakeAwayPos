@@ -30,52 +30,7 @@
                                     Value="{Binding KeypadValue}"/>
         </StackPanel>
 
-        <!-- Summary Cards -->
-        <Grid Grid.Row="2" Margin="0,0,0,32">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- Expected Cash -->
-            <Border Grid.Column="0" Background="{DynamicResource BackgroundGray}" Padding="16" CornerRadius="8" Margin="0,0,8,0">
-                <StackPanel>
-                    <TextBlock Text="Expected" FontSize="12" Foreground="{DynamicResource TextDarkGray}"/>
-                    <TextBlock Text="{Binding ExpectedCash, StringFormat=C}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextBlack}"/>
-                </StackPanel>
-            </Border>
-
-            <!-- Cash Counted -->
-            <Border Grid.Column="1" Background="{DynamicResource BackgroundGray}" Padding="16" CornerRadius="8" Margin="8,0,8,0">
-                <StackPanel>
-                    <TextBlock Text="Counted" FontSize="12" Foreground="{DynamicResource TextDarkGray}"/>
-                    <TextBlock Text="{Binding CountedCash, StringFormat=C}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextBlack}"/>
-                </StackPanel>
-            </Border>
-
-            <!-- Difference -->
-            <Border Grid.Column="2" Background="{DynamicResource BackgroundGray}" Padding="16" CornerRadius="8" Margin="8,0,0,0">
-                <StackPanel>
-                    <TextBlock Text="Difference" FontSize="12" Foreground="{DynamicResource TextDarkGray}"/>
-                    <TextBlock Text="{Binding Difference, StringFormat=C}" FontSize="18" FontWeight="Bold">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Foreground" Value="{DynamicResource TextBlack}"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Difference, Converter={StaticResource NumberSignConverter}}" Value="Positive">
-                                        <Setter Property="Foreground" Value="Green"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding Difference, Converter={StaticResource NumberSignConverter}}" Value="Negative">
-                                        <Setter Property="Foreground" Value="Red"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                </StackPanel>
-            </Border>
-        </Grid>
+       
 
         <!-- Buttons -->
         <Grid Grid.Row="3">

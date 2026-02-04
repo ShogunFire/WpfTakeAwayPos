@@ -8,6 +8,8 @@ namespace RestaurantPOS.ViewModels
     {
         private readonly ICashControlService _cashControlService;
         private readonly IPopupService _popupService;
+        private readonly IShiftService _shiftService;
+        private readonly INavigationService _navigationService;
 
         [ObservableProperty]
         private decimal keypadValue;
@@ -24,20 +26,30 @@ namespace RestaurantPOS.ViewModels
         [ObservableProperty]
         private decimal openingFloat;
 
-        public EndShiftViewModel(ICashControlService cashControlService, IPopupService popupService)
+        public EndShiftViewModel(
+            ICashControlService cashControlService, 
+            IPopupService popupService,
+            IShiftService shiftService,
+            INavigationService navigationService)
         {
             _cashControlService = cashControlService;
             _popupService = popupService;
+            _shiftService = shiftService;
+            _navigationService = navigationService;
             RefreshData();
         }
 
         [RelayCommand(CanExecute = nameof(CanSubmit))]
         public void Submit()
         {
-            _cashControlService.SetActualCash(KeypadValue);
-            RefreshData();
+            // End the current shift with counted and expected cash
+            _shiftService.EndShift(KeypadValue, ExpectedCash, "");
+            
             _popupService.Close();
             KeypadValue = 0;
+            
+            // Navigate back to main menu after ending shift
+            _navigationService.Navigate<MainMenuViewModel>();
         }
 
         [RelayCommand]

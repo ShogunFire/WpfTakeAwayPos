@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using RestaurantPOS.Data;
 using RestaurantPOS.Models;
 using RestaurantPOS.Services;
 using RestaurantPOS.Services.Interfaces;
@@ -13,6 +14,7 @@ namespace RestaurantPOS
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+            SqliteDb.Initialize();
             var services = new ServiceCollection();
             
             // Order session management - singleton service that manages the current order
@@ -23,7 +25,9 @@ namespace RestaurantPOS
             services.AddSingleton<IThemeService, ThemeService>();
             services.AddSingleton<IDialogService, DialogService>();
             services.AddSingleton<IFeatureService, FeatureService>();
+            services.AddSingleton<IShiftService, ShiftService>();
             services.AddSingleton<ICashControlService, CashControlService>();
+            services.AddSingleton<OrderService>();
 
             services.AddSingleton<IInventoryService>(sp =>
             {
@@ -36,8 +40,9 @@ namespace RestaurantPOS
             services.AddSingleton<IInventoryCostService>(sp =>
             {
                 var features = sp.GetRequiredService<IFeatureService>();
+                var shiftService = sp.GetRequiredService<IShiftService>();
                 return features.InventoryCostModuleEnabled
-                    ? new InventoryCostService()
+                    ? new InventoryCostService(shiftService)
                     : new NoopInventoryCostService();
             });
 

@@ -210,7 +210,6 @@ namespace RestaurantPOS.ViewModels
                 : _removeReasonsByCategory.Keys;
 
             Categories = new ObservableCollection<string>(categories);
-            SelectedCategory = Categories.FirstOrDefault();
         }
 
         private void LoadReasons()
@@ -231,8 +230,6 @@ namespace RestaurantPOS.ViewModels
                     AvailableReasons.Add(new CashRemovalReason(reason, description));
                 }
             }
-
-            SelectedReason = AvailableReasons.FirstOrDefault();
         }
 
         partial void OnSelectedCategoryChanged(string value)

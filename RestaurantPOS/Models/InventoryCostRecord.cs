@@ -8,6 +8,7 @@ namespace RestaurantPOS.Models
     public class InventoryCostRecord
     {
         public Guid Id { get; set; }
+        public long? ShiftId { get; set; }
         public Guid InventoryItemId { get; set; }
         public string ItemName { get; set; } = string.Empty;
         public decimal QuantityReceived { get; set; }

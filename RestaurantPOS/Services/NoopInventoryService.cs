@@ -23,6 +23,11 @@ namespace RestaurantPOS.Services
         {
             return true;
         }
+        
+        public InventoryItem InsertInventoryItem(string name, decimal quantity, string unit)
+        {
+            return null;
+        }
 
         public void AddStock(Guid inventoryItemId, decimal quantity)
         {
