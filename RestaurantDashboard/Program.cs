@@ -8,7 +8,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Register Analytics Service
+// Register specialized analytics services
+builder.Services.AddScoped<ISalesAnalyticsService, SalesAnalyticsService>();
+builder.Services.AddScoped<IMenuItemAnalyticsService, MenuItemAnalyticsService>();
+builder.Services.AddScoped<IInventoryAnalyticsService, InventoryAnalyticsService>();
+builder.Services.AddScoped<ILocationAnalyticsService, LocationAnalyticsService>();
+
+// Register main Analytics Service facade
 builder.Services.AddScoped<AnalyticsService>();
 
 

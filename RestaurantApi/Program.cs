@@ -54,6 +54,7 @@ builder.Services.AddSwaggerGen(options =>
 // Register Dapper repositories
 builder.Services.AddScoped(sp => new ProcessedEventRepository(connectionString));
 builder.Services.AddScoped(sp => new InventoryItemRepository(connectionString));
+builder.Services.AddScoped(sp => new CategoryRepository(connectionString));
 builder.Services.AddScoped(sp => new LocationInventoryRepository(connectionString));
 builder.Services.AddScoped(sp => new InventoryCostRecordRepository(connectionString));
 builder.Services.AddScoped(sp => new InventoryQueryRepository(connectionString));
@@ -64,10 +65,14 @@ builder.Services.AddScoped(sp => new CashTransactionRepository(connectionString)
 builder.Services.AddScoped(sp => new MenuItemRepository(connectionString));
 builder.Services.AddScoped(sp => new MenuItemComponentRepository(connectionString));
 builder.Services.AddScoped(sp => new ShiftRepository(connectionString));
+builder.Services.AddScoped(sp => new ExpenseRepository(connectionString));
+builder.Services.AddScoped(sp => new ExpenseCategoryRepository(connectionString));
+builder.Services.AddScoped(sp => new MenuItemGrossProfitHistoryRepository(connectionString));
 
 // Register repository interfaces
 builder.Services.AddScoped<IProcessedEventRepository>(sp => sp.GetRequiredService<ProcessedEventRepository>());
 builder.Services.AddScoped<IInventoryItemRepository>(sp => sp.GetRequiredService<InventoryItemRepository>());
+builder.Services.AddScoped<ICategoryRepository>(sp => sp.GetRequiredService<CategoryRepository>());
 builder.Services.AddScoped<ILocationInventoryRepository>(sp => sp.GetRequiredService<LocationInventoryRepository>());
 builder.Services.AddScoped<IInventoryCostRecordRepository>(sp => sp.GetRequiredService<InventoryCostRecordRepository>());
 builder.Services.AddScoped<IInventoryQueryRepository>(sp => sp.GetRequiredService<InventoryQueryRepository>());
@@ -78,8 +83,12 @@ builder.Services.AddScoped<ICashTransactionRepository>(sp => sp.GetRequiredServi
 builder.Services.AddScoped<IMenuItemRepository>(sp => sp.GetRequiredService<MenuItemRepository>());
 builder.Services.AddScoped<IMenuItemComponentRepository>(sp => sp.GetRequiredService<MenuItemComponentRepository>());
 builder.Services.AddScoped<IShiftRepository>(sp => sp.GetRequiredService<ShiftRepository>());
+builder.Services.AddScoped<IExpenseRepository>(sp => sp.GetRequiredService<ExpenseRepository>());
+builder.Services.AddScoped<IExpenseCategoryRepository>(sp => sp.GetRequiredService<ExpenseCategoryRepository>());
+builder.Services.AddScoped<IMenuItemGrossProfitHistoryRepository>(sp => sp.GetRequiredService<MenuItemGrossProfitHistoryRepository>());
 
 // Register event handlers
+builder.Services.AddScoped<IMenuItemCostService, MenuItemCostService>();
 builder.Services.AddScoped<IEventHandler, InventoryEventHandler>();
 builder.Services.AddScoped<IEventHandler, OrderEventHandler>();
 builder.Services.AddScoped<IEventHandler, PaymentEventHandler>();
@@ -88,6 +97,9 @@ builder.Services.AddScoped<IEventHandler, ShiftEventHandler>();
 
 // Register event processor
 builder.Services.AddScoped<IEventProcessor, EventProcessor>();
+
+// Register background service for event processing
+builder.Services.AddHostedService<EventQueueService>();
 
 var app = builder.Build();
 

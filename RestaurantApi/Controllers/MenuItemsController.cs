@@ -26,10 +26,10 @@ public class MenuItemsController : ControllerBase
         var dtos = items.Select(i => new MenuItemDto
         {
             Id = i.Id,
+            IdCategory = i.IdCategory,
             Name = i.Name,
             Description = i.Description,
             Price = i.Price,
-            Category = i.Category,
             IsActive = i.IsActive
         });
         
@@ -48,10 +48,10 @@ public class MenuItemsController : ControllerBase
         var dto = new MenuItemDto
         {
             Id = item.Id,
+            IdCategory = item.IdCategory,
             Name = item.Name,
             Description = item.Description,
             Price = item.Price,
-            Category = item.Category,
             IsActive = item.IsActive
         };
         

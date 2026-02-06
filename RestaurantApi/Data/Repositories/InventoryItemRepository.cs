@@ -43,8 +43,8 @@ public class InventoryItemRepository : IInventoryItemRepository
         var sql = @"
             IF NOT EXISTS (SELECT 1 FROM InventoryItems WHERE Id = @Id)
             BEGIN
-                INSERT INTO InventoryItems (Id, Name, Unit, CreatedAt, UpdatedAt)
-                VALUES (@Id, @Name, @Unit, @CreatedAt, @UpdatedAt);
+                INSERT INTO InventoryItems (Id, Name, Unit, CurrentUnitCost, LastCostUpdate, CreatedAt, UpdatedAt)
+                VALUES (@Id, @Name, @Unit, @CurrentUnitCost, @LastCostUpdate, @CreatedAt, @UpdatedAt);
             END";
         await connection.ExecuteAsync(sql, inventoryItem);
     }
@@ -54,7 +54,7 @@ public class InventoryItemRepository : IInventoryItemRepository
         using IDbConnection connection = new SqlConnection(_connectionString);
         var sql = @"
             UPDATE InventoryItems
-            SET Name = @Name, Unit = @Unit, UpdatedAt = @UpdatedAt
+            SET Name = @Name, Unit = @Unit, CurrentUnitCost = @CurrentUnitCost, LastCostUpdate = @LastCostUpdate, UpdatedAt = @UpdatedAt
             WHERE Id = @Id";
         var result = await connection.ExecuteAsync(sql, inventoryItem);
         return result > 0;

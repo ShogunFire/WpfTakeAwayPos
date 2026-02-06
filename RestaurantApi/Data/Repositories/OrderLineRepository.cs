@@ -40,8 +40,8 @@ public class OrderLineRepository : IOrderLineRepository
     {
         using IDbConnection connection = new SqlConnection(_connectionString);
         var sql = @"
-            INSERT INTO OrderLines (Id, OrderId, Quantity, UnitPrice, LineTotal, MenuItemName, MenuItemId)
-            VALUES (@Id, @OrderId, @Quantity, @UnitPrice, @LineTotal, @MenuItemName, @MenuItemId);";
+            INSERT INTO OrderLines (Id, OrderId, LocationId, Quantity, UnitPrice, LineTotal, MenuItemName, MenuItemId)
+            VALUES (@Id, @OrderId, @LocationId, @Quantity, @UnitPrice, @LineTotal, @MenuItemName, @MenuItemId);";
         await connection.ExecuteAsync(sql, orderLine);
     }
 

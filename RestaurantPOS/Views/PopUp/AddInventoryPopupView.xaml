@@ -7,6 +7,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -67,10 +68,28 @@
                                 Value="{Binding KeypadValue, Mode=TwoWay}"
                                 Margin="0,0,0,20"/>
 
-        
+        <!-- Paid with Cash Checkbox -->
+        <CheckBox Grid.Row="3"
+                  Content="Paid with Cash (Creates Expense)"
+                  IsChecked="{Binding PaidWithCash}"
+                  FontSize="16"
+                  Foreground="{DynamicResource TextBlack}"
+                  Margin="0,0,0,20"
+                  VerticalAlignment="Center">
+            <CheckBox.Style>
+                <Style TargetType="CheckBox">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding InventoryCostModuleEnabled, Source={StaticResource FeatureService}}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </CheckBox.Style>
+        </CheckBox>
 
         <!-- Buttons -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Stretch">
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Stretch">
             <Button Content="Cancel" 
                     Command="{Binding CancelCommand}"
                     Padding="20,15"

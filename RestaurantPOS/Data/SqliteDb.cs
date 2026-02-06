@@ -90,6 +90,12 @@ namespace RestaurantPOS.Data
         {
             var commands = new List<string>
             {
+                @"CREATE TABLE IF NOT EXISTS Categories (
+                    Id TEXT PRIMARY KEY,
+                    Name TEXT NOT NULL,
+                    Description TEXT,
+                    IsActive INTEGER NOT NULL DEFAULT 1
+                );",
                 @"CREATE TABLE IF NOT EXISTS InventoryItems (
                     Id TEXT PRIMARY KEY,
                     Name TEXT NOT NULL,
@@ -98,11 +104,12 @@ namespace RestaurantPOS.Data
                 );",
                 @"CREATE TABLE IF NOT EXISTS MenuItems (
                     Id TEXT PRIMARY KEY,
+                    IdCategory TEXT NOT NULL,
                     Name TEXT NOT NULL,
                     Description TEXT,
                     Price REAL NOT NULL,
-                    Category TEXT NOT NULL,
-                    IsActive INTEGER NOT NULL DEFAULT 1
+                    IsActive INTEGER NOT NULL DEFAULT 1,
+                    FOREIGN KEY(IdCategory) REFERENCES Categories(Id)
                 );",
                 @"CREATE TABLE IF NOT EXISTS MenuItemComponents (
                     Id TEXT PRIMARY KEY,
@@ -174,8 +181,8 @@ namespace RestaurantPOS.Data
                     Id TEXT PRIMARY KEY,
                     Type TEXT NOT NULL,
                     Payload TEXT NOT NULL,
-                    CreatedAt TEXT NOT NULL,
-                    SyncedAt TEXT NULL,
+                    CreatedAt DATETIME NOT NULL,
+                    SyncedAt DATETIME NULL,
                     DeviceId TEXT NOT NULL
                 );"
             };

@@ -11,14 +11,20 @@ namespace RestaurantPOS.Models
         public decimal Amount { get; set; }
         public string Reason { get; set; }
         public string Description { get; set; }
+        public bool IsExpense { get; set; }
+        public Guid? RelatedInventoryCostRecordId { get; set; }
+        public Guid? LocationId { get; set; }
 
-        public CashTransaction(CashTransactionType type, decimal amount, string reason = null)
+        public CashTransaction(CashTransactionType type, decimal amount, string reason = null, bool isExpense = false, Guid? relatedInventoryCostRecordId = null, Guid? locationId = null)
         {
             TransactionGuid = Guid.NewGuid();
             Timestamp = DateTime.Now;
             Type = type;
             Amount = amount;
             Reason = reason;
+            IsExpense = isExpense;
+            RelatedInventoryCostRecordId = relatedInventoryCostRecordId;
+            LocationId = locationId;
             Description = GenerateDescription();
         }
 

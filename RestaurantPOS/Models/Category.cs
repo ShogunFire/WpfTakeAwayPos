@@ -1,11 +1,12 @@
-using FontAwesome.Sharp;
+using System;
 
 namespace RestaurantPOS.Models
 {
     public class Category
     {
-        public int CategoryId { get; set; }
-        public string Name { get; set; }
-        public string Icon { get; set; }
+        public Guid CategoryId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
     }
 }

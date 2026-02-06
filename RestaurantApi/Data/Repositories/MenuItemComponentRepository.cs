@@ -7,6 +7,7 @@ namespace RestaurantApi.Data.Repositories;
 public interface IMenuItemComponentRepository
 {
     Task<IEnumerable<MenuItemComponent>> GetByMenuItemIdAsync(Guid menuItemId);
+    Task<IEnumerable<MenuItemComponent>> GetByInventoryItemIdAsync(Guid inventoryItemId);
     Task<IEnumerable<MenuItemComponent>> GetAllAsync();
 }
 
@@ -28,6 +29,17 @@ public class MenuItemComponentRepository : IMenuItemComponentRepository
             WHERE MenuItemId = @MenuItemId";
         
         return await connection.QueryAsync<MenuItemComponent>(sql, new { MenuItemId = menuItemId });
+    }
+
+    public async Task<IEnumerable<MenuItemComponent>> GetByInventoryItemIdAsync(Guid inventoryItemId)
+    {
+        using var connection = new SqlConnection(_connectionString);
+        const string sql = @"
+            SELECT Id, MenuItemId, InventoryItemId, Quantity
+            FROM MenuItemComponents
+            WHERE InventoryItemId = @InventoryItemId";
+        
+        return await connection.QueryAsync<MenuItemComponent>(sql, new { InventoryItemId = inventoryItemId });
     }
 
     public async Task<IEnumerable<MenuItemComponent>> GetAllAsync()

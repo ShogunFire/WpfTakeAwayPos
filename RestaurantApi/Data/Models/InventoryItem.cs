@@ -5,6 +5,8 @@ public class InventoryItem
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Unit { get; set; } = string.Empty;
+    public decimal CurrentUnitCost { get; set; }
+    public DateTime? LastCostUpdate { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

@@ -4,7 +4,7 @@
 
 -- Create SyncEvents table to track events that need to be synchronized to the API
 CREATE TABLE IF NOT EXISTS SyncEvents (
-    Id TEXT PRIMARY KEY,
+    Id BLOB PRIMARY KEY,         -- GUID stored as binary data (16 bytes)
     Type TEXT NOT NULL,          -- Event type: order_created, payment_processed, inventory_item_updated, etc.
     Payload TEXT,                -- JSON payload containing event data
     CreatedAt DATETIME NOT NULL, -- When the event was created (UTC)
@@ -26,8 +26,8 @@ ON SyncEvents(CreatedAt);
 
 -- Optional: Create SyncEventLog table for auditing sync attempts
 CREATE TABLE IF NOT EXISTS SyncEventLogs (
-    Id TEXT PRIMARY KEY,
-    EventId TEXT NOT NULL,
+    Id BLOB PRIMARY KEY,         -- GUID stored as binary data (16 bytes)
+    EventId BLOB NOT NULL,       -- GUID reference to SyncEvents
     AttemptNumber INTEGER NOT NULL,
     Timestamp DATETIME NOT NULL,
     Success BOOLEAN NOT NULL,

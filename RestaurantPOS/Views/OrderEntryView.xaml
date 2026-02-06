@@ -3,7 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:fa="http://schemas.awesome.incremented/wpf/xaml/fontawesome.sharp"
              mc:Ignorable="d"
              Padding="16"
              Background="{DynamicResource PageBackground}"
@@ -171,22 +170,10 @@
                 </ListBox.ItemsPanel>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="24"/>
-                                <ColumnDefinition Width="8"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            
-                            <fa:IconImage Icon="{Binding Icon}" Height="14" Width="14" Foreground="{StaticResource TextBlack}"/>
-
-                            <!-- Name -->
-                            <TextBlock Grid.Column="2"
-                               Text="{Binding Name}"
+                        <TextBlock Text="{Binding Name}"
                                VerticalAlignment="Center"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource TextBlack}"/>
-                        </Grid>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>

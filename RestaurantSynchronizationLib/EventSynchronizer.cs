@@ -114,6 +114,9 @@ public class EventSynchronizer
 
             foreach (var syncResult in syncResults)
             {
+                _logger.LogDebug("Sync result - EventId: {EventId}, Success: {Success}, AlreadyProcessed: {AlreadyProcessed}, Error: {Error}", 
+                    syncResult.EventId, syncResult.Success, syncResult.AlreadyProcessed, syncResult.Error);
+                    
                 if (syncResult.Success && !syncResult.AlreadyProcessed)
                 {
                     successfulEventIds.Add(syncResult.EventId);
@@ -135,7 +138,22 @@ public class EventSynchronizer
         // Mark successful events as synced in database
         if (successfulEventIds.Any())
         {
-            await _eventRepository.MarkAsSyncedAsync(successfulEventIds);
+            _logger.LogInformation("Marking {Count} events as synced", successfulEventIds.Count);
+            try
+            {
+                await _eventRepository.MarkAsSyncedAsync(successfulEventIds);
+                _logger.LogInformation("Successfully marked {Count} events as synced", successfulEventIds.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking {Count} events as synced", successfulEventIds.Count);
+                throw;
+            }
+        }
+        else
+        {
+            _logger.LogInformation("No events to mark as synced. Synced: {Synced}, Already processed: {AlreadyProcessed}, Failed: {Failed}", 
+                result.SyncedCount, result.AlreadyProcessedCount, result.FailedCount);
         }
     }
 

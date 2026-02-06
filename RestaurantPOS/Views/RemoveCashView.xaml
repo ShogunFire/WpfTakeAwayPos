@@ -50,6 +50,15 @@
                                         IsPrefix="True"
                                         Value="{Binding KeypadValue}"/>
 
+                <!-- Is Expense Checkbox -->
+                <CheckBox Content="Mark as Business Expense"
+                          IsChecked="{Binding IsExpense}"
+                          FontSize="16"
+                          Foreground="{DynamicResource TextBlack}"
+                          Margin="0,0,0,30"
+                          HorizontalAlignment="Center"
+                          ToolTip="Check this if the cash removal is for a business expense (e.g., rent, utilities, supplies)"/>
+
                 <!-- Action Buttons -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" >
                     <Button Content="Cancel" 

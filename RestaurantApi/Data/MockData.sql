@@ -36,23 +36,31 @@ VALUES
     ('A0000000-0000-0000-0000-000000000015', 'Oregano', 'kg', GETUTCDATE(), GETUTCDATE());
 
 -- ===========================
+-- CATEGORIES
+-- ===========================
+INSERT INTO Categories (Id, Name, Description, IsActive, CreatedAt, UpdatedAt)
+VALUES 
+    ('C0000000-0000-0000-0000-000000000001', 'Combos', 'Complete meal combinations with sides', 1, GETUTCDATE(), GETUTCDATE()),
+    ('C0000000-0000-0000-0000-000000000002', 'Extras', 'Side orders and additional items', 1, GETUTCDATE(), GETUTCDATE());
+
+-- ===========================
 -- MENU ITEMS - COMBOS
 -- ===========================
-INSERT INTO MenuItems (Id, Name, Description, Price, Category, IsActive, CreatedAt, UpdatedAt)
+INSERT INTO MenuItems (Id, IdCategory, Name, Description, Price, IsActive, CreatedAt, UpdatedAt)
 VALUES 
     -- Chicken Combos (All include: Spicy sauce, rice, onions & tortillas)
-    ('B0000000-0000-0000-0000-000000000001', 'Whole Chicken Combo', 'Whole chicken with spicy sauce, rice, onions & tortillas', 170.00, 'Combos', 1, GETUTCDATE(), GETUTCDATE()),
-    ('B0000000-0000-0000-0000-000000000002', '3/4 Chicken Combo', '3/4 chicken with spicy sauce, rice, onions & tortillas', 140.00, 'Combos', 1, GETUTCDATE(), GETUTCDATE()),
-    ('B0000000-0000-0000-0000-000000000003', '1/2 Chicken Combo', '1/2 chicken with spicy sauce, rice, onions & tortillas', 100.00, 'Combos', 1, GETUTCDATE(), GETUTCDATE()),
-    ('B0000000-0000-0000-0000-000000000004', '1/4 Chicken Combo', '1/4 chicken with spicy sauce, rice, onions & tortillas', 70.00, 'Combos', 1, GETUTCDATE(), GETUTCDATE()),
+    ('B0000000-0000-0000-0000-000000000001', 'C0000000-0000-0000-0000-000000000001', 'Whole Chicken Combo', 'Whole chicken with spicy sauce, rice, onions & tortillas', 170.00, 1, GETUTCDATE(), GETUTCDATE()),
+    ('B0000000-0000-0000-0000-000000000002', 'C0000000-0000-0000-0000-000000000001', '3/4 Chicken Combo', '3/4 chicken with spicy sauce, rice, onions & tortillas', 140.00, 1, GETUTCDATE(), GETUTCDATE()),
+    ('B0000000-0000-0000-0000-000000000003', 'C0000000-0000-0000-0000-000000000001', '1/2 Chicken Combo', '1/2 chicken with spicy sauce, rice, onions & tortillas', 100.00, 1, GETUTCDATE(), GETUTCDATE()),
+    ('B0000000-0000-0000-0000-000000000004', 'C0000000-0000-0000-0000-000000000001', '1/4 Chicken Combo', '1/4 chicken with spicy sauce, rice, onions & tortillas', 70.00, 1, GETUTCDATE(), GETUTCDATE()),
     
     -- Extras
-    ('B0000000-0000-0000-0000-000000000011', 'Extra Potato', 'Side order of seasoned potato', 15.00, 'Extras', 1, GETUTCDATE(), GETUTCDATE()),
-    ('B0000000-0000-0000-0000-000000000012', 'Extra Sausage', 'Side order of grilled sausage', 15.00, 'Extras', 1, GETUTCDATE(), GETUTCDATE()),
-    ('B0000000-0000-0000-0000-000000000013', 'Extra Onions', 'Side order of grilled onions', 15.00, 'Extras', 1, GETUTCDATE(), GETUTCDATE()),
-    ('B0000000-0000-0000-0000-000000000014', 'Extra Rice', 'Side order of rice', 10.00, 'Extras', 1, GETUTCDATE(), GETUTCDATE()),
-    ('B0000000-0000-0000-0000-000000000015', 'Extra Spicy Sauce', 'Additional spicy sauce', 10.00, 'Extras', 1, GETUTCDATE(), GETUTCDATE()),
-    ('B0000000-0000-0000-0000-000000000016', 'Extra Tortillas', 'Side order of tortillas', 10.00, 'Extras', 1, GETUTCDATE(), GETUTCDATE());
+    ('B0000000-0000-0000-0000-000000000011', 'C0000000-0000-0000-0000-000000000002', 'Extra Potato', 'Side order of seasoned potato', 15.00, 1, GETUTCDATE(), GETUTCDATE()),
+    ('B0000000-0000-0000-0000-000000000012', 'C0000000-0000-0000-0000-000000000002', 'Extra Sausage', 'Side order of grilled sausage', 15.00, 1, GETUTCDATE(), GETUTCDATE()),
+    ('B0000000-0000-0000-0000-000000000013', 'C0000000-0000-0000-0000-000000000002', 'Extra Onions', 'Side order of grilled onions', 15.00, 1, GETUTCDATE(), GETUTCDATE()),
+    ('B0000000-0000-0000-0000-000000000014', 'C0000000-0000-0000-0000-000000000002', 'Extra Rice', 'Side order of rice', 10.00, 1, GETUTCDATE(), GETUTCDATE()),
+    ('B0000000-0000-0000-0000-000000000015', 'C0000000-0000-0000-0000-000000000002', 'Extra Spicy Sauce', 'Additional spicy sauce', 10.00, 1, GETUTCDATE(), GETUTCDATE()),
+    ('B0000000-0000-0000-0000-000000000016', 'C0000000-0000-0000-0000-000000000002', 'Extra Tortillas', 'Side order of tortillas', 10.00, 1, GETUTCDATE(), GETUTCDATE());
 
 -- ===========================
 -- MENU ITEM COMPONENTS
@@ -165,3 +173,16 @@ VALUES
     ('22222222-2222-2222-2222-222222222222', 'A0000000-0000-0000-0000-000000000013', 1.5, GETUTCDATE()),    -- 1.5 kg black pepper
     ('22222222-2222-2222-2222-222222222222', 'A0000000-0000-0000-0000-000000000014', 1.0, GETUTCDATE()),    -- 1 kg cumin
     ('22222222-2222-2222-2222-222222222222', 'A0000000-0000-0000-0000-000000000015', 0.8, GETUTCDATE());    -- 0.8 kg oregano
+-- ===========================
+-- EXPENSE CATEGORIES
+-- ===========================
+INSERT INTO ExpenseCategories (Id, Name, IsCOGS, IsActive, CreatedAt, UpdatedAt)
+VALUES 
+    ('D0000000-0000-0000-0000-000000000001', 'COGS - Inventory', 1, 1, GETUTCDATE(), GETUTCDATE()),
+    ('D0000000-0000-0000-0000-000000000002', 'Rent', 0, 1, GETUTCDATE(), GETUTCDATE()),
+    ('D0000000-0000-0000-0000-000000000003', 'Utilities', 0, 1, GETUTCDATE(), GETUTCDATE()),
+    ('D0000000-0000-0000-0000-000000000004', 'Salaries', 0, 1, GETUTCDATE(), GETUTCDATE()),
+    ('D0000000-0000-0000-0000-000000000005', 'Marketing', 0, 1, GETUTCDATE(), GETUTCDATE()),
+    ('D0000000-0000-0000-0000-000000000006', 'Maintenance', 0, 1, GETUTCDATE(), GETUTCDATE()),
+    ('D0000000-0000-0000-0000-000000000007', 'Insurance', 0, 1, GETUTCDATE(), GETUTCDATE()),
+    ('D0000000-0000-0000-0000-000000000008', 'Licenses & Permits', 0, 1, GETUTCDATE(), GETUTCDATE());

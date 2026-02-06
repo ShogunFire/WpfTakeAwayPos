@@ -43,8 +43,6 @@ public class EventProcessor : IEventProcessor
                     _logger.LogInformation("Event already processed: {EventId} ({EventType})", @event.Id, @event.Type);
                     return (true, true);
                 }
-
-                _logger.LogWarning("Retrying event with status {Status}: {EventId} ({EventType})", existingEvent.Status, @event.Id, @event.Type);
             }
 
             var payloadJson = JsonSerializer.Serialize(@event.Payload, new JsonSerializerOptions
@@ -52,60 +50,28 @@ public class EventProcessor : IEventProcessor
                 WriteIndented = false
             });
 
-            // Ensure event is stored even if processing fails
+            // Queue event for processing by background service
             var processedEvent = new ProcessedEvent
             {
                 Id = @event.Id,
                 EventType = @event.Type,
                 DeviceId = @event.DeviceId,
                 Payload = payloadJson,
-                Status = existingEvent == null ? "Received" : existingEvent.Status,
+                Status = "Queued",
                 ErrorMessage = null,
-                ReceivedAt = existingEvent?.ReceivedAt ?? DateTime.UtcNow,
+                ReceivedAt = DateTime.UtcNow,
                 LastAttemptAt = null,
-                AttemptCount = existingEvent?.AttemptCount ?? 0,
+                AttemptCount = 0,
                 ProcessedAt = null
             };
 
             await _processedEventRepository.AddOrUpdateAsync(processedEvent);
-
-            // Find appropriate handler
-            var handler = _handlers.FirstOrDefault(h => h.CanHandle(@event.Type));
-            if (handler == null)
-            {
-                _logger.LogWarning("No handler found for event type: {EventType}", @event.Type);
-                return (false, false);
-            }
-
-            _logger.LogInformation("Processing event: {EventId} ({EventType}) with handler {HandlerType}", 
-                @event.Id, @event.Type, handler.GetType().Name);
-
-            // Process event
-            try
-            {
-                await handler.HandleAsync(@event);
-
-                await _processedEventRepository.UpdateStatusAsync(@event.Id, "Processed", null, DateTime.UtcNow);
-
-                _logger.LogInformation("Event processed successfully: {EventId} ({EventType})", @event.Id, @event.Type);
-                return (true, false);
-            }
-            catch (Exception ex)
-            {
-                var errorDetails = $"{ex.GetType().Name}: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}";
-                if (ex.InnerException != null)
-                {
-                    errorDetails += $"\n\nInner Exception: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}\n{ex.InnerException.StackTrace}";
-                }
-                
-                _logger.LogError(ex, "Exception processing event: {EventId} ({EventType})", @event.Id, @event.Type);
-                await _processedEventRepository.UpdateStatusAsync(@event.Id, "Failed", errorDetails, null);
-                throw;
-            }
+            _logger.LogInformation("Event queued for processing: {EventId} ({EventType})", @event.Id, @event.Type);
+            return (true, false);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Fatal error processing event: {EventId} ({EventType})", @event.Id, @event.Type);
+            _logger.LogError(ex, "Error queueing event: {EventId} ({EventType})", @event.Id, @event.Type);
             throw;
         }
     }

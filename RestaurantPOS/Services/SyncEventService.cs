@@ -40,10 +40,10 @@ namespace RestaurantPOS.Services
             using var cmd = connection.CreateCommand();
             cmd.CommandText = @"INSERT INTO SyncEvents (Id, Type, Payload, CreatedAt, SyncedAt, DeviceId)
                                 VALUES (@Id, @Type, @Payload, @CreatedAt, @SyncedAt, @DeviceId);";
-            cmd.Parameters.AddWithValue("@Id", @event.Id.ToString());
+            cmd.Parameters.AddWithValue("@Id", @event.Id.ToString()); // Convert Guid to string (TEXT)
             cmd.Parameters.AddWithValue("@Type", @event.Type ?? string.Empty);
             cmd.Parameters.AddWithValue("@Payload", payloadJson ?? string.Empty);
-            cmd.Parameters.AddWithValue("@CreatedAt", @event.CreatedAt.ToString("O"));
+            cmd.Parameters.AddWithValue("@CreatedAt", @event.CreatedAt); // DateTime as DATETIME
             cmd.Parameters.AddWithValue("@SyncedAt", DBNull.Value);
             cmd.Parameters.AddWithValue("@DeviceId", @event.DeviceId ?? string.Empty);
             cmd.ExecuteNonQuery();

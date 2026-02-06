@@ -89,7 +89,9 @@ namespace RestaurantPOS
             });
 
             services.AddSingleton<MenuService>();
-            services.AddSingleton<IMasterDataSyncService, MasterDataSyncService>();
+            services.AddSingleton<IMasterDataSyncService>(sp => new MasterDataSyncService(
+                sp.GetRequiredService<HttpClient>(),
+                sp.GetRequiredService<PosSettings>()));
 
             var syncConfig = new SyncConfiguration
             {

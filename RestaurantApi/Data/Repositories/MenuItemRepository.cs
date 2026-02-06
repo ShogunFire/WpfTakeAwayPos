@@ -9,6 +9,7 @@ public interface IMenuItemRepository
 {
     Task<IEnumerable<MenuItem>> GetAllAsync();
     Task<MenuItem?> GetByIdAsync(Guid id);
+    Task<bool> UpdateAsync(MenuItem menuItem);
 }
 
 public class MenuItemRepository : IMenuItemRepository
@@ -24,10 +25,10 @@ public class MenuItemRepository : IMenuItemRepository
     {
         using var connection = new SqlConnection(_connectionString);
         const string sql = @"
-            SELECT Id, Name, Description, Price, Category, IsActive, CreatedAt, UpdatedAt
+            SELECT Id, IdCategory, Name, Description, Price, CurrentCOGS, LastCOGSUpdate, IsActive, CreatedAt, UpdatedAt
             FROM MenuItems
             WHERE IsActive = 1
-            ORDER BY Category, Name";
+            ORDER BY IdCategory, Name";
         
         return await connection.QueryAsync<MenuItem>(sql);
     }
@@ -36,10 +37,29 @@ public class MenuItemRepository : IMenuItemRepository
     {
         using var connection = new SqlConnection(_connectionString);
         const string sql = @"
-            SELECT Id, Name, Description, Price, Category, IsActive, CreatedAt, UpdatedAt
+            SELECT Id, IdCategory, Name, Description, Price, CurrentCOGS, LastCOGSUpdate, IsActive, CreatedAt, UpdatedAt
             FROM MenuItems
             WHERE Id = @Id";
         
         return await connection.QuerySingleOrDefaultAsync<MenuItem>(sql, new { Id = id });
+    }
+
+    public async Task<bool> UpdateAsync(MenuItem menuItem)
+    {
+        using var connection = new SqlConnection(_connectionString);
+        const string sql = @"
+            UPDATE MenuItems
+            SET IdCategory = @IdCategory,
+                Name = @Name,
+                Description = @Description,
+                Price = @Price,
+                CurrentCOGS = @CurrentCOGS,
+                LastCOGSUpdate = @LastCOGSUpdate,
+                IsActive = @IsActive,
+                UpdatedAt = @UpdatedAt
+            WHERE Id = @Id";
+
+        var result = await connection.ExecuteAsync(sql, menuItem);
+        return result > 0;
     }
 }

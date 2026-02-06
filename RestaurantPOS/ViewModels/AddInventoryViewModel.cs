@@ -23,6 +23,9 @@ namespace RestaurantPOS.ViewModels
         [ObservableProperty]
         private decimal totalCost;
 
+        [ObservableProperty]
+        private bool paidWithCash;
+
         public AddInventoryViewModel(IInventoryService inventoryService, IInventoryCostService costService, IPopupService popupService)
         {
             _inventoryService = inventoryService;
@@ -35,6 +38,7 @@ namespace RestaurantPOS.ViewModels
             ActiveInventoryItem = item;
             Quantity = 0;
             TotalCost = 0;
+            PaidWithCash = false;
             ActiveTarget = KeypadTarget.Quantity;
             ConfirmAdjustmentCommand.NotifyCanExecuteChanged();
         }
@@ -77,7 +81,7 @@ namespace RestaurantPOS.ViewModels
                 return;
 
             // Add stock to inventory
-            _inventoryService.AddStock(ActiveInventoryItem.InventoryItemId, Quantity, "Manual Add", TotalCost);
+            _inventoryService.AddStock(ActiveInventoryItem.InventoryItemId, Quantity, "Manual Add", TotalCost, PaidWithCash);
 
             // Record cost if entered
             if (TotalCost > 0)

@@ -42,8 +42,8 @@ public class OrderRepository : IOrderRepository
         var sql = @"
             IF NOT EXISTS (SELECT 1 FROM Orders WHERE Id = @Id)
             BEGIN
-                INSERT INTO Orders (Id, ShiftId, Subtotal, Tax, TotalAmount, TotalPaid, Remaining, TotalChange, CreatedAt, UpdatedAt)
-                VALUES (@Id, @ShiftId, @Subtotal, @Tax, @TotalAmount, @TotalPaid, @Remaining, @TotalChange, @CreatedAt, @UpdatedAt);
+                INSERT INTO Orders (Id, ShiftId, LocationId, Subtotal, Tax, TotalAmount, TotalPaid, Remaining, TotalChange, TotalCOGS, GrossProfit, ProfitMargin, CreatedAt, UpdatedAt)
+                VALUES (@Id, @ShiftId, @LocationId, @Subtotal, @Tax, @TotalAmount, @TotalPaid, @Remaining, @TotalChange, @TotalCOGS, @GrossProfit, @ProfitMargin, @CreatedAt, @UpdatedAt);
             END";
         await connection.ExecuteAsync(sql, order);
     }
@@ -53,8 +53,9 @@ public class OrderRepository : IOrderRepository
         using IDbConnection connection = new SqlConnection(_connectionString);
         var sql = @"
             UPDATE Orders
-            SET ShiftId = @ShiftId, Subtotal = @Subtotal, Tax = @Tax, TotalAmount = @TotalAmount, 
-                TotalPaid = @TotalPaid, Remaining = @Remaining, TotalChange = @TotalChange, UpdatedAt = @UpdatedAt
+            SET ShiftId = @ShiftId, LocationId = @LocationId, Subtotal = @Subtotal, Tax = @Tax, TotalAmount = @TotalAmount, 
+                TotalPaid = @TotalPaid, Remaining = @Remaining, TotalChange = @TotalChange, TotalCOGS = @TotalCOGS, 
+                GrossProfit = @GrossProfit, ProfitMargin = @ProfitMargin, UpdatedAt = @UpdatedAt
             WHERE Id = @Id";
         var result = await connection.ExecuteAsync(sql, order);
         return result > 0;

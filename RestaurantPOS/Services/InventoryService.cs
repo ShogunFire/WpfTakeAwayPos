@@ -96,7 +96,7 @@ namespace RestaurantPOS.Services
             return true;
         }
 
-        public void AddStock(Guid inventoryItemId, decimal quantity, string reason = null, decimal? totalCost = null)
+        public void AddStock(Guid inventoryItemId, decimal quantity, string reason = null, decimal? totalCost = null, bool paidWithCash = false)
         {
             if (quantity <= 0)
                 return;
@@ -116,7 +116,8 @@ namespace RestaurantPOS.Services
                 Quantity = quantity,
                 Unit = item.Unit,
                 TotalCost = totalCost,
-                Reason = reason
+                Reason = reason,
+                PaidWithCash = paidWithCash
             });
         }
 

@@ -29,7 +29,7 @@ namespace RestaurantPOS.Services
             return null;
         }
 
-        public void AddStock(Guid inventoryItemId, decimal quantity, string reason = null, decimal? totalCost = null)
+        public void AddStock(Guid inventoryItemId, decimal quantity, string reason = null, decimal? totalCost = null, bool paidWithCash = false)
         {
             // no-op
         }

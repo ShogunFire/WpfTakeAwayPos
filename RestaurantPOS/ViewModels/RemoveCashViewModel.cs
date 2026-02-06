@@ -17,12 +17,21 @@ namespace RestaurantPOS.ViewModels
         private string selectedRemovalReason;
 
         [ObservableProperty]
+        private bool isExpense;
+
+        [ObservableProperty]
         private ObservableCollection<string> removalReasons = new()
         {
             "Bank Deposit",
             "Petty Cash",
             "Change Fund",
             "Safe Drop",
+            "Rent",
+            "Utilities",
+            "Payroll",
+            "Supplies",
+            "Equipment",
+            "Maintenance",
             "Other"
         };
 
@@ -37,10 +46,11 @@ namespace RestaurantPOS.ViewModels
         {
             if (!string.IsNullOrWhiteSpace(SelectedRemovalReason))
             {
-                _cashControlService.RemoveCash(KeypadValue, SelectedRemovalReason);
+                _cashControlService.RemoveCash(KeypadValue, SelectedRemovalReason, IsExpense);
                 await _dialogService.Alert($"Removed ${KeypadValue:F2} - {SelectedRemovalReason}", "Cash Removal");
                 KeypadValue = 0;
                 SelectedRemovalReason = null;
+                IsExpense = false;
             }
         }
 

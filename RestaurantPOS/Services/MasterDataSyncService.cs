@@ -31,6 +31,13 @@ namespace RestaurantPOS.Services
         {
             try
             {
+                // Sync categories first (as menu items depend on them)
+                var categories = await FetchCategoriesAsync();
+                if (categories != null && categories.Any())
+                {
+                    SaveCategories(categories);
+                }
+
                 // Sync inventory items
                 var inventoryItems = await FetchInventoryItemsAsync();
                 if (inventoryItems != null && inventoryItems.Any())
@@ -66,6 +73,21 @@ namespace RestaurantPOS.Services
             {
                 // Log error but don't crash the app
                 Console.WriteLine($"Error syncing master data: {ex.Message}");
+            }
+        }
+
+        private async Task<IEnumerable<CategoryDto>?> FetchCategoriesAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/categories");
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadFromJsonAsync<IEnumerable<CategoryDto>>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching categories: {ex.Message}");
+                return null;
             }
         }
 
@@ -126,6 +148,49 @@ namespace RestaurantPOS.Services
             {
                 Console.WriteLine($"Error fetching location inventory: {ex.Message}");
                 return null;
+            }
+        }
+
+        private void SaveCategories(IEnumerable<CategoryDto> categories)
+        {
+            using var connection = SqliteDb.CreateConnection();
+            connection.Open();
+
+            using var transaction = connection.BeginTransaction();
+
+            try
+            {
+                // Clear existing categories
+                using (var deleteCmd = connection.CreateCommand())
+                {
+                    deleteCmd.CommandText = "DELETE FROM Categories";
+                    deleteCmd.Transaction = transaction;
+                    deleteCmd.ExecuteNonQuery();
+                }
+
+                // Insert new categories
+                foreach (var category in categories)
+                {
+                    using var insertCmd = connection.CreateCommand();
+                    insertCmd.Transaction = transaction;
+                    insertCmd.CommandText = @"
+                        INSERT INTO Categories (Id, Name, Description, IsActive)
+                        VALUES (@Id, @Name, @Description, @IsActive)";
+                    
+                    insertCmd.Parameters.AddWithValue("@Id", category.Id.ToString());
+                    insertCmd.Parameters.AddWithValue("@Name", category.Name ?? string.Empty);
+                    insertCmd.Parameters.AddWithValue("@Description", category.Description ?? string.Empty);
+                    insertCmd.Parameters.AddWithValue("@IsActive", category.IsActive ? 1 : 0);
+                    
+                    insertCmd.ExecuteNonQuery();
+                }
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
             }
         }
 
@@ -196,14 +261,14 @@ namespace RestaurantPOS.Services
                     using var insertCmd = connection.CreateCommand();
                     insertCmd.Transaction = transaction;
                     insertCmd.CommandText = @"
-                        INSERT INTO MenuItems (Id, Name, Description, Price, Category, IsActive)
-                        VALUES (@Id, @Name, @Description, @Price, @Category, @IsActive)";
+                        INSERT INTO MenuItems (Id, IdCategory, Name, Description, Price, IsActive)
+                        VALUES (@Id, @IdCategory, @Name, @Description, @Price, @IsActive)";
                     
                     insertCmd.Parameters.AddWithValue("@Id", item.Id.ToString());
+                    insertCmd.Parameters.AddWithValue("@IdCategory", item.IdCategory.ToString());
                     insertCmd.Parameters.AddWithValue("@Name", item.Name);
                     insertCmd.Parameters.AddWithValue("@Description", item.Description ?? string.Empty);
                     insertCmd.Parameters.AddWithValue("@Price", item.Price);
-                    insertCmd.Parameters.AddWithValue("@Category", item.Category);
                     insertCmd.Parameters.AddWithValue("@IsActive", item.IsActive ? 1 : 0);
                     
                     insertCmd.ExecuteNonQuery();

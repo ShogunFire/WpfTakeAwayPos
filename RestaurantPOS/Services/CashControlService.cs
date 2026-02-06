@@ -3,6 +3,7 @@ using RestaurantPOS.Data;
 using RestaurantPOS.Models;
 using RestaurantPOS.Services.Interfaces;
 using RestaurantShared.DTOs;
+using RestaurantPOS.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -14,6 +15,7 @@ namespace RestaurantPOS.Services
     {
         private readonly IShiftService _shiftService;
         private readonly ISyncEventService _syncEventService;
+            private readonly PosSettings _settings;
         private readonly List<CashTransaction> _transactions = new();
         private decimal _actualCash;
         private bool _isCounted;
@@ -48,10 +50,11 @@ namespace RestaurantPOS.Services
 
         public bool IsCounted => _isCounted;
 
-        public CashControlService(IShiftService shiftService, ISyncEventService syncEventService)
+    public CashControlService(IShiftService shiftService, ISyncEventService syncEventService, PosSettings settings)
         {
             _shiftService = shiftService;
             _syncEventService = syncEventService;
+                        _settings = settings;
             LoadTransactions();
             EnsureOpeningFloatForActiveShift();
         }
@@ -62,10 +65,10 @@ namespace RestaurantPOS.Services
             InsertTransaction(new CashTransaction(CashTransactionType.Sale, amount));
         }
 
-        public void RemoveCash(decimal amount, string reason)
+        public void RemoveCash(decimal amount, string reason, bool isExpense = false, Guid? relatedInventoryCostRecordId = null)
         {
             if (amount <= 0) return;
-            InsertTransaction(new CashTransaction(CashTransactionType.Removal, amount, reason));
+            InsertTransaction(new CashTransaction(CashTransactionType.Removal, amount, reason, isExpense, relatedInventoryCostRecordId, _settings?.LocationId));
         }
 
         public void AddCash(decimal amount, string reason)
@@ -208,7 +211,10 @@ namespace RestaurantPOS.Services
                 transaction.Amount,
                 transaction.Reason,
                 transaction.Description,
-                transaction.Timestamp
+                transaction.Timestamp,
+                transaction.IsExpense,
+                transaction.RelatedInventoryCostRecordId,
+                transaction.LocationId
             });
         }
 

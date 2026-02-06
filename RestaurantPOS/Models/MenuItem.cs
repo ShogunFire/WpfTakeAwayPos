@@ -8,13 +8,13 @@ namespace RestaurantPOS.Models
     {
         [ObservableProperty] private int menuItemId;
         [ObservableProperty] private Guid menuItemGuid = Guid.NewGuid();
-        [ObservableProperty] private int categoryId;
+        [ObservableProperty] private Guid categoryId;
         [ObservableProperty] private string name;
         [ObservableProperty] private decimal price;
         [ObservableProperty] private List<MenuItemComponent> components = new();
 
 
-        public MenuItem(int menuItemId, int categoryId, string name, decimal price, List<MenuItemComponent> components = null)
+        public MenuItem(int menuItemId, Guid categoryId, string name, decimal price, List<MenuItemComponent> components = null)
         {
             MenuItemId = menuItemId;
             CategoryId = categoryId;

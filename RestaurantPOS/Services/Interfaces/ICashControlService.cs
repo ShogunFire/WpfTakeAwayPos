@@ -13,7 +13,7 @@ namespace RestaurantPOS.Services.Interfaces
         bool IsCounted { get; }
         
         void RecordSale(decimal amount);
-        void RemoveCash(decimal amount, string reason);
+        void RemoveCash(decimal amount, string reason, bool isExpense = false, Guid? relatedInventoryCostRecordId = null);
         void AddCash(decimal amount, string reason);
         void SetActualCash(decimal amount);
         void ResetShift();

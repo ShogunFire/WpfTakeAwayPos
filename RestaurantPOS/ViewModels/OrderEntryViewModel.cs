@@ -3,12 +3,12 @@ using CommunityToolkit.Mvvm.Input;
 using RestaurantPOS.Models;
 using RestaurantPOS.Services;
 using RestaurantPOS.Services.Interfaces;
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.ComponentModel;
 using System.Collections.Specialized;
 using System.Windows.Input;
-using FontAwesome.Sharp;
 using System.Threading.Tasks;
 
 #nullable enable
@@ -54,12 +54,12 @@ namespace RestaurantPOS.ViewModels
             _orderSession.OrderLinesChanged += (_, _) =>
                 GoToPaymentCommand.NotifyCanExecuteChanged();
 
-            // Mock data for Categories
-            Categories.Add(new Category { CategoryId = 1, Name = "All Items", Icon = "Bars" });
-            Categories.Add(new Category { CategoryId = 2, Name = "Appetizers", Icon = "Utensils" } );
-            Categories.Add(new Category { CategoryId = 3, Name = "Burgers", Icon = "Hamburger" });
-            Categories.Add(new Category { CategoryId = 4, Name = "Pizzas", Icon = "PizzaSlice" });
-            Categories.Add(new Category { CategoryId = 5, Name = "Beverages", Icon = "Cocktail" });
+            // Load categories from database
+            Categories.Add(new Category { CategoryId = Guid.Empty, Name = "All Items", IsActive = true });
+            foreach (var category in _menuService.GetCategories().Where(c => c.IsActive))
+            {
+                Categories.Add(category);
+            }
 
             // Load mock menu items from MenuService
             _allMenuItems = new ObservableCollection<MenuItem>(_menuService.GetMenuItems());
@@ -82,7 +82,7 @@ namespace RestaurantPOS.ViewModels
 
             if (SelectedCategory == null) return;
 
-            if (SelectedCategory.CategoryId == 1) // All Items
+            if (SelectedCategory.CategoryId == Guid.Empty) // All Items
             {
                 foreach (var item in _allMenuItems)
                     FilteredMenuItems.Add(item);

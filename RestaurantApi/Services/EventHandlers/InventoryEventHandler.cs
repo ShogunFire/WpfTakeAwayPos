@@ -10,17 +10,26 @@ public class InventoryEventHandler : IEventHandler
     private readonly IInventoryItemRepository _inventoryRepository;
     private readonly ILocationInventoryRepository _locationInventoryRepository;
     private readonly IInventoryCostRecordRepository _inventoryCostRepository;
+    private readonly IExpenseRepository _expenseRepository;
+    private readonly IExpenseCategoryRepository _expenseCategoryRepository;
+    private readonly IMenuItemCostService _menuItemCostService;
     private readonly ILogger<InventoryEventHandler> _logger;
 
     public InventoryEventHandler(
         IInventoryItemRepository inventoryRepository,
         ILocationInventoryRepository locationInventoryRepository,
         IInventoryCostRecordRepository inventoryCostRepository,
+        IExpenseRepository expenseRepository,
+        IExpenseCategoryRepository expenseCategoryRepository,
+        IMenuItemCostService menuItemCostService,
         ILogger<InventoryEventHandler> logger)
     {
         _inventoryRepository = inventoryRepository;
         _locationInventoryRepository = locationInventoryRepository;
         _inventoryCostRepository = inventoryCostRepository;
+        _expenseRepository = expenseRepository;
+        _expenseCategoryRepository = expenseCategoryRepository;
+        _menuItemCostService = menuItemCostService;
         _logger = logger;
     }
 
@@ -98,6 +107,68 @@ public class InventoryEventHandler : IEventHandler
             };
 
             await _inventoryCostRepository.AddAsync(costRecord);
+
+            // Create expense record if this was paid for
+            if (payload.PaidWithCash)
+            {
+                // Check if expense already exists for this cost record
+                var existingExpense = await _expenseRepository.GetByInventoryCostRecordIdAsync(costRecord.Id);
+                if (existingExpense == null)
+                {
+                    // Get COGS category
+                    var cogsCategory = await _expenseCategoryRepository.GetByNameAsync("COGS - Inventory");
+                    if (cogsCategory != null)
+                    {
+                        var expense = new Expense
+                        {
+                            Id = Guid.NewGuid(),
+                            ExpenseCategoryId = cogsCategory.Id,
+                            Amount = payload.TotalCost.Value,
+                            Description = $"Inventory: {item.Name}",
+                            ExpenseDate = @event.CreatedAt,
+                            LocationId = payload.LocationId.Value,
+                            ShiftId = payload.ShiftId,
+                            InventoryCostRecordId = costRecord.Id,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+                        await _expenseRepository.AddAsync(expense);
+
+                        _logger.LogInformation(
+                            "Created expense record for inventory purchase: {ItemName} @ ${Amount}",
+                            item.Name, payload.TotalCost.Value);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("COGS category not found, cannot create expense for inventory purchase");
+                    }
+                }
+            }
+
+            // Update inventory item's current unit cost and trigger MenuItem COGS recalculation
+            try
+            {
+                decimal unitCost = payload.TotalCost.Value / payload.Quantity;
+                item.CurrentUnitCost = unitCost;
+                item.LastCostUpdate = DateTime.UtcNow;
+                item.UpdatedAt = DateTime.UtcNow;
+
+                await _inventoryRepository.UpdateAsync(item);
+
+                // Recalculate COGS for all MenuItems using this ingredient
+                await _menuItemCostService.RecalculateMenuItemsCOGSByIngredientAsync(item.Id);
+
+                _logger.LogInformation(
+                    "Updated unit cost for {ItemName}: ${UnitCost:F2}/unit, triggered MenuItems COGS recalculation",
+                    item.Name, unitCost);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error updating unit cost and recalculating COGS for inventory item {ItemId}",
+                    item.Id);
+            }
         }
 
         _logger.LogInformation(
@@ -156,6 +227,7 @@ public class InventoryEventHandler : IEventHandler
         public string? Unit { get; set; }
         public string? Reason { get; set; }
         public decimal? TotalCost { get; set; }
+        public bool PaidWithCash { get; set; }
     }
 
     private static T? DeserializePayload<T>(object? payload) where T : class

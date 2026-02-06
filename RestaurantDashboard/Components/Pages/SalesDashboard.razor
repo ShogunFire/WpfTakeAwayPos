@@ -34,20 +34,20 @@
     {
         <div class="metrics-grid">
             <div class="metric-card">
-                <div class="metric-label">Total Sales</div>
-                <div class="metric-value positive">$@totalSales.ToString("N2")</div>
+                <div class="metric-label">Total Revenue</div>
+                <div class="metric-value positive">$@totalRevenue.ToString("N2")</div>
             </div>
             <div class="metric-card">
-                <div class="metric-label">Total Orders</div>
-                <div class="metric-value">@totalOrders.ToString("N0")</div>
+                <div class="metric-label">Total Cost</div>
+                <div class="metric-value">$@totalCost.ToString("N2")</div>
             </div>
             <div class="metric-card">
-                <div class="metric-label">Average Order</div>
-                <div class="metric-value">$@averageOrder.ToString("N2")</div>
+                <div class="metric-label">Total Profit</div>
+                <div class="metric-value positive">$@totalProfit.ToString("N2")</div>
             </div>
             <div class="metric-card">
-                <div class="metric-label">Period</div>
-                <div class="metric-value small">@salesData.Count @interval</div>
+                <div class="metric-label">Profit Margin</div>
+                <div class="metric-value">@(totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).ToString("N1") : "0")%</div>
             </div>
         </div>
 
@@ -56,19 +56,86 @@
             <div class="section">
                 <h2>Sales Over Time</h2>
                 <div class="chart-container">
-                    <div class="bar-chart">
+                    <svg class="line-chart" viewBox="0 0 1200 400" preserveAspectRatio="xMidYMid meet">
                         @{
-                            var maxSales = salesData.Max(d => d.TotalSales);
+                            var points = salesData.OrderBy(d => d.Period).ToList();
+                            if (points.Any())
+                            {
+                                var maxValue = Math.Max(
+                                    Math.Max(points.Max(p => p.TotalRevenue), points.Max(p => p.TotalCost)),
+                                    points.Max(p => p.TotalProfit)
+                                );
+                                var padding = 60;
+                                var chartWidth = 1200 - (padding * 2);
+                                var chartHeight = 400 - (padding * 2);
+                                var pointSpacing = chartWidth / (points.Count > 1 ? points.Count - 1 : 1);
+                                var yScale = chartHeight / (maxValue > 0 ? maxValue : 100);
+                                
+                                <g class="grid">
+                                    @for (int i = 0; i <= 5; i++)
+                                    {
+                                        var yValue = (maxValue / 5) * (5 - i);
+                                        var yPos = padding + (i * chartHeight / 5);
+                                        <line x1="@padding" y1="@yPos" x2="@(1200 - padding)" y2="@yPos" stroke="#e0e0e0" stroke-width="1"/>
+                                    }
+                                </g>
+                                
+                                <polyline class="line revenue" points="@string.Join(" ", points.Select((p, i) => 
+                                    $"{padding + (i * pointSpacing)},{padding + chartHeight - (p.TotalRevenue * yScale)}"))"/>
+                                
+                                <polyline class="line cost" points="@string.Join(" ", points.Select((p, i) => 
+                                    $"{padding + (i * pointSpacing)},{padding + chartHeight - (p.TotalCost * yScale)}"))"/>
+                                
+                                <polyline class="line profit" points="@string.Join(" ", points.Select((p, i) => 
+                                    $"{padding + (i * pointSpacing)},{padding + chartHeight - (p.TotalProfit * yScale)}"))"/>
+                                
+                                @foreach (var (p, i) in points.Select((p, i) => (p, i)))
+                                {
+                                    var x = padding + (i * pointSpacing);
+                                    var y = padding + chartHeight - (p.TotalRevenue * yScale);
+                                    <circle class="point revenue" cx="@x" cy="@y" r="4"/>
+                                }
+                                
+                                @foreach (var (p, i) in points.Select((p, i) => (p, i)))
+                                {
+                                    var x = padding + (i * pointSpacing);
+                                    var y = padding + chartHeight - (p.TotalCost * yScale);
+                                    <circle class="point cost" cx="@x" cy="@y" r="4"/>
+                                }
+                                
+                                @foreach (var (p, i) in points.Select((p, i) => (p, i)))
+                                {
+                                    var x = padding + (i * pointSpacing);
+                                    var y = padding + chartHeight - (p.TotalProfit * yScale);
+                                    <circle class="point profit" cx="@x" cy="@y" r="4"/>
+                                }
+                                
+                                <line x1="@padding" y1="@padding" x2="@padding" y2="@(400 - padding)" stroke="#333" stroke-width="2"/>
+                                <line x1="@padding" y1="@(400 - padding)" x2="@(1200 - padding)" y2="@(400 - padding)" stroke="#333" stroke-width="2"/>
+                            }
                         }
-                        @foreach (var data in salesData)
+                    </svg>
+                </div>
+                <div class="chart-labels">
+                    <div class="label-row">
+                        @foreach (var data in salesData.OrderBy(d => d.Period))
                         {
-                            var heightPercent = maxSales > 0 ? (data.TotalSales / maxSales * 100) : 0;
-                            <div class="bar-wrapper">
-                                <div class="bar-value">$@data.TotalSales.ToString("N0")</div>
-                                <div class="bar" style="height: @heightPercent%"></div>
-                                <div class="bar-label">@FormatPeriod(data.Period)</div>
-                            </div>
+                            <div class="period-label">@FormatPeriod(data.Period)</div>
                         }
+                    </div>
+                </div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <span class="legend-color revenue"></span>
+                        <span>Revenue</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color cost"></span>
+                        <span>Cost</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color profit"></span>
+                        <span>Profit</span>
                     </div>
                 </div>
             </div>
@@ -81,17 +148,24 @@
                             <tr>
                                 <th>Period</th>
                                 <th>Orders</th>
-                                <th>Total Sales</th>
-                                <th>Avg Order Value</th>
+                                <th>Revenue</th>
+                                <th>Cost</th>
+                                <th>Profit</th>
+                                <th>Profit %</th>
+                                <th>Avg Order</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var data in salesData.OrderByDescending(d => d.Period))
                             {
+                                var profitPercent = data.TotalRevenue > 0 ? ((data.TotalProfit / data.TotalRevenue) * 100) : 0;
                                 <tr>
                                     <td>@FormatPeriod(data.Period)</td>
                                     <td>@data.OrderCount.ToString("N0")</td>
-                                    <td>$@data.TotalSales.ToString("N2")</td>
+                                    <td>$@data.TotalRevenue.ToString("N2")</td>
+                                    <td>$@data.TotalCost.ToString("N2")</td>
+                                    <td class="@(data.TotalProfit >= 0 ? "positive" : "negative")">$@data.TotalProfit.ToString("N2")</td>
+                                    <td class="@(profitPercent >= 0 ? "positive" : "negative")">@profitPercent.ToString("N1")%</td>
                                     <td>$@data.AverageOrderValue.ToString("N2")</td>
                                 </tr>
                             }
@@ -100,8 +174,11 @@
                             <tr class="totals-row">
                                 <td><strong>Total</strong></td>
                                 <td><strong>@totalOrders.ToString("N0")</strong></td>
-                                <td><strong>$@totalSales.ToString("N2")</strong></td>
-                                <td><strong>$@averageOrder.ToString("N2")</strong></td>
+                                <td><strong>$@totalRevenue.ToString("N2")</strong></td>
+                                <td><strong>$@totalCost.ToString("N2")</strong></td>
+                                <td><strong>$@totalProfit.ToString("N2")</strong></td>
+                                <td><strong>@(totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).ToString("N1") : "0")%</strong></td>
+                                <td><strong>$@(totalOrders > 0 ? (totalRevenue / totalOrders).ToString("N2") : "0.00")</strong></td>
                             </tr>
                         </tfoot>
                     </table>
@@ -264,6 +341,118 @@
         max-width: 100%;
     }
 
+    /* Line Chart Styles */
+    .line-chart {
+        width: 100%;
+        height: auto;
+    }
+
+    .line-chart .grid line {
+        stroke: #e0e0e0;
+        stroke-dasharray: 2,2;
+    }
+
+    .line-chart .axis-label {
+        font-size: 12px;
+        fill: #666;
+        text-anchor: end;
+    }
+
+    .line {
+        stroke-width: 3;
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .line.revenue {
+        stroke: #28a745;
+    }
+
+    .line.cost {
+        stroke: #dc3545;
+    }
+
+    .line.profit {
+        stroke: #007bff;
+    }
+
+    .point {
+        fill: white;
+        stroke-width: 2;
+    }
+
+    .point.revenue {
+        stroke: #28a745;
+    }
+
+    .point.cost {
+        stroke: #dc3545;
+    }
+
+    .point.profit {
+        stroke: #007bff;
+    }
+
+    .point:hover {
+        r: 6;
+    }
+
+    .chart-labels {
+        padding: 0 70px;
+    }
+
+    .label-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 0;
+        font-size: 12px;
+        color: #666;
+        text-align: center;
+    }
+
+    .period-label {
+        padding: 10px 5px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .legend {
+        display: flex;
+        gap: 30px;
+        justify-content: center;
+        margin-top: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 4px;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+    }
+
+    .legend-color {
+        width: 20px;
+        height: 3px;
+        border-radius: 2px;
+    }
+
+    .legend-color.revenue {
+        background: #28a745;
+    }
+
+    .legend-color.cost {
+        background: #dc3545;
+    }
+
+    .legend-color.profit {
+        background: #007bff;
+    }
+
     .table-container {
         background: white;
         border-radius: 8px;
@@ -291,6 +480,16 @@
     .data-table td {
         padding: 12px 16px;
         border-bottom: 1px solid #dee2e6;
+    }
+
+    .data-table td.positive {
+        color: #28a745;
+        font-weight: 500;
+    }
+
+    .data-table td.negative {
+        color: #dc3545;
+        font-weight: 500;
     }
 
     .data-table tbody tr:hover {
@@ -327,9 +526,10 @@
     private bool isLoading = false;
     
     private List<SalesDataPoint> salesData = new();
-    private decimal totalSales = 0;
+    private decimal totalRevenue = 0;
+    private decimal totalCost = 0;
+    private decimal totalProfit = 0;
     private int totalOrders = 0;
-    private decimal averageOrder = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -347,9 +547,10 @@
             var locationId = string.IsNullOrEmpty(selectedLocationId) ? (Guid?)null : Guid.Parse(selectedLocationId);
             salesData = await Analytics.GetSalesOverTimeAsync(startDate, endDate, locationId, interval);
             
-            totalSales = salesData.Sum(d => d.TotalSales);
+            totalRevenue = salesData.Sum(d => d.TotalRevenue);
+            totalCost = salesData.Sum(d => d.TotalCost);
+            totalProfit = totalRevenue - totalCost;
             totalOrders = salesData.Sum(d => d.OrderCount);
-            averageOrder = totalOrders > 0 ? totalSales / totalOrders : 0;
         }
         finally
         {
@@ -366,9 +567,9 @@
             {
                 "month" => date.ToString("MMM yyyy"),
                 "week" => $"Week of {date:MMM dd}",
-                _ => date.ToString("MMM dd, yyyy")
+                _ => date.ToString("MMM dd")
             };
         }
         return period;
     }
-}
+}}

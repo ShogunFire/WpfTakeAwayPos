@@ -9,7 +9,8 @@ public interface IProcessedEventRepository
 {
     Task<ProcessedEvent?> GetByIdAsync(Guid id);
     Task AddOrUpdateAsync(ProcessedEvent processedEvent);
-    Task UpdateStatusAsync(Guid id, string status, string? errorMessage, DateTime? processedAt);
+    Task UpdateStatusAsync(Guid id, string status, string? errorMessage, DateTime? processedAt, int? attemptCount = null);
+    Task<List<ProcessedEvent>> GetPendingEventsAsync();
 }
 
 public class ProcessedEventRepository : IProcessedEventRepository
@@ -50,7 +51,7 @@ public class ProcessedEventRepository : IProcessedEventRepository
         await connection.ExecuteAsync(sql, processedEvent);
     }
 
-    public async Task UpdateStatusAsync(Guid id, string status, string? errorMessage, DateTime? processedAt)
+    public async Task UpdateStatusAsync(Guid id, string status, string? errorMessage, DateTime? processedAt, int? attemptCount = null)
     {
         using IDbConnection connection = new SqlConnection(_connectionString);
         var sql = @"
@@ -58,7 +59,7 @@ public class ProcessedEventRepository : IProcessedEventRepository
             SET Status = @Status,
                 ErrorMessage = @ErrorMessage,
                 LastAttemptAt = SYSUTCDATETIME(),
-                AttemptCount = AttemptCount + 1,
+                AttemptCount = CASE WHEN @AttemptCount IS NOT NULL THEN @AttemptCount ELSE AttemptCount + 1 END,
                 ProcessedAt = @ProcessedAt
             WHERE Id = @Id;";
 
@@ -67,7 +68,19 @@ public class ProcessedEventRepository : IProcessedEventRepository
             Id = id,
             Status = status,
             ErrorMessage = errorMessage,
-            ProcessedAt = processedAt
+            ProcessedAt = processedAt,
+            AttemptCount = attemptCount
         });
+    }
+
+    public async Task<List<ProcessedEvent>> GetPendingEventsAsync()
+    {
+        using IDbConnection connection = new SqlConnection(_connectionString);
+        var sql = @"
+            SELECT * FROM ProcessedEvents
+            WHERE Status = 'Queued'
+            ORDER BY ReceivedAt ASC;";
+        var results = await connection.QueryAsync<ProcessedEvent>(sql);
+        return results.ToList();
     }
 }

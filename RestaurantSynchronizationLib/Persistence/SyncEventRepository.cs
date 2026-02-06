@@ -135,8 +135,8 @@ public class SyncEventRepository
                     UPDATE SyncEvents
                     SET SyncedAt = @SyncedAt
                     WHERE Id = @Id";
-                cmd.Parameters.AddWithValue("@Id", eventId);
-                cmd.Parameters.AddWithValue("@SyncedAt", DateTime.UtcNow);
+                cmd.Parameters.AddWithValue("@Id", eventId.ToString()); // Convert Guid to string (TEXT)
+                cmd.Parameters.AddWithValue("@SyncedAt", DateTime.UtcNow); // DateTime as DATETIME
 
                 await cmd.ExecuteNonQueryAsync();
             }
@@ -157,26 +157,37 @@ public class SyncEventRepository
     {
         try
         {
+            var idList = eventIds.ToList();
+            _logger.LogInformation("Starting to mark {Count} events as synced", idList.Count);
+            
             using (var connection = new SQLiteConnection(_connectionString))
             {
                 await connection.OpenAsync();
 
-                foreach (var eventId in eventIds)
+                foreach (var eventId in idList)
                 {
                     var cmd = connection.CreateCommand();
                     cmd.CommandText = @"
                         UPDATE SyncEvents
                         SET SyncedAt = @SyncedAt
                         WHERE Id = @Id";
-                    cmd.Parameters.AddWithValue("@Id", eventId);
-                    cmd.Parameters.AddWithValue("@SyncedAt", DateTime.UtcNow);
+                    cmd.Parameters.Clear(); // Clear parameters before adding new ones
+                    cmd.Parameters.AddWithValue("@Id", eventId.ToString()); // Convert Guid to string (TEXT)
+                    cmd.Parameters.AddWithValue("@SyncedAt", DateTime.UtcNow); // DateTime as DATETIME
 
-                    await cmd.ExecuteNonQueryAsync();
+                    int rowsAffected = await cmd.ExecuteNonQueryAsync();
+                    if (rowsAffected == 0)
+                    {
+                        _logger.LogWarning("No rows updated for event {EventId} - event may not exist in database", eventId);
+                    }
+                    else
+                    {
+                        _logger.LogDebug("Marked event {EventId} as synced", eventId);
+                    }
                 }
             }
 
-            var count = eventIds.Count();
-            _logger.LogInformation("Marked {Count} events as synced", count);
+            _logger.LogInformation("Successfully marked {Count} events as synced", idList.Count);
         }
         catch (Exception ex)
         {
@@ -198,7 +209,7 @@ public class SyncEventRepository
 
                 var cmd = connection.CreateCommand();
                 cmd.CommandText = "DELETE FROM SyncEvents WHERE Id = @Id AND SyncedAt IS NOT NULL";
-                cmd.Parameters.AddWithValue("@Id", eventId);
+                cmd.Parameters.AddWithValue("@Id", eventId.ToString()); // Convert Guid to string (TEXT)
 
                 await cmd.ExecuteNonQueryAsync();
             }
