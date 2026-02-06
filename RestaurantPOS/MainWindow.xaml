@@ -13,6 +13,9 @@
             <DataTemplate DataType="{x:Type vm:MainMenuViewModel}">
                 <views:MainMenuView/>
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:LoginViewModel}">
+                <views:LoginView/>
+            </DataTemplate>
             <DataTemplate DataType="{x:Type vm:InventoryViewModel}">
                 <views:InventoryView/>
             </DataTemplate>
@@ -29,6 +32,9 @@
             </DataTemplate>
             <DataTemplate DataType="{x:Type vm:EndShiftViewModel}">
                 <views:EndShiftPopupView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:ShiftSummaryViewModel}">
+                <views:ShiftSummaryView/>
             </DataTemplate>
             <DataTemplate DataType="{x:Type vm:AddInventoryViewModel}">
                 <views:AddInventoryPopupView/>
@@ -58,6 +64,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <!-- Logo and Title -->
@@ -73,8 +80,24 @@
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
-                <!-- End Shift Button -->
+                <!-- Sync Button -->
                 <Button Grid.Column="1"
+                    Visibility="{Binding TopBar.ShowTopMenuButtons, Converter={StaticResource BoolToVisibilityConverter}}"
+                    Content="⟳ Sync"
+                    Width="120"
+                    Height="50"
+                    Background="#2D8CFF"
+                    Foreground="White"
+                    FontSize="14"
+                    FontWeight="Bold"
+                    BorderThickness="0"
+                    Cursor="Hand"
+                    Margin="0,0,12,0"
+                    Command="{Binding TopBar.SyncNowCommand}"/>
+
+                <!-- End Shift Button -->
+                <Button Grid.Column="2"
+                        Visibility="{Binding TopBar.ShowTopMenuButtons, Converter={StaticResource BoolToVisibilityConverter}}"
                         Content="🏁 End Shift"
                         Width="150"
                         Height="50"
@@ -88,8 +111,8 @@
                         Command="{Binding TopBar.EndShiftCommand}"/>
 
                 <!-- Home Button -->
-                <Button Grid.Column="2"
-                        Visibility="{Binding TopBar.ShowHomeButton, Converter={StaticResource BoolToVisibilityConverter}}"
+                <Button Grid.Column="3"
+                        Visibility="{Binding TopBar.ShowTopMenuButtons, Converter={StaticResource BoolToVisibilityConverter}}"
                         Width="50"
                         Height="50"
                         Background="{DynamicResource BackgroundWhite}"

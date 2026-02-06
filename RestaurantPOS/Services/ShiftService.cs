@@ -1,7 +1,9 @@
 using Microsoft.Data.Sqlite;
+using RestaurantPOS.Configuration;
 using RestaurantPOS.Data;
 using RestaurantPOS.Models;
 using RestaurantPOS.Services.Interfaces;
+using RestaurantShared.DTOs;
 using System;
 using System.Globalization;
 
@@ -10,10 +12,14 @@ namespace RestaurantPOS.Services
     public class ShiftService : IShiftService
     {
         private Shift _activeShift;
+        private readonly ISyncEventService _syncEventService;
+        private readonly PosSettings _settings;
 
-        public ShiftService()
+        public ShiftService(ISyncEventService syncEventService, PosSettings settings)
         {
-            _activeShift = LoadActiveShift() ?? StartNewShift(200m); // Default opening cash
+            _syncEventService = syncEventService;
+            _settings = settings;
+            _activeShift = LoadActiveShift();
         }
 
         public Shift GetActiveShift()
@@ -40,22 +46,33 @@ namespace RestaurantPOS.Services
             connection.Open();
 
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = @"INSERT INTO Shifts (StartDateTime, OpeningCash, IsActive)
-                                VALUES (@StartDateTime, @OpeningCash, @IsActive);
+            cmd.CommandText = @"INSERT INTO Shifts (ShiftGuid, StartDateTime, OpeningCash, IsActive)
+                                VALUES (@ShiftGuid, @StartDateTime, @OpeningCash, @IsActive);
                                 SELECT last_insert_rowid();";
+            cmd.Parameters.AddWithValue("@ShiftGuid", shift.ShiftGuid.ToString());
             cmd.Parameters.AddWithValue("@StartDateTime", shift.StartDateTime.ToString("O"));
             cmd.Parameters.AddWithValue("@OpeningCash", shift.OpeningCash);
             cmd.Parameters.AddWithValue("@IsActive", 1);
             shift.ShiftId = (long)cmd.ExecuteScalar();
 
             _activeShift = shift;
+
+            // Create shift started event
+            _syncEventService.CreateEvent(EventTypes.ShiftStarted, new
+            {
+                ShiftId = shift.ShiftGuid,
+                LocationId = _settings.LocationId == Guid.Empty ? (Guid?)null : _settings.LocationId,
+                StartDateTime = shift.StartDateTime,
+                OpeningCash = shift.OpeningCash
+            });
+
             return shift;
         }
 
-        public void EndShift(decimal declaredCash, decimal expectedCash, string notes = null)
+        public Shift EndShift(decimal declaredCash, decimal expectedCash, string notes = null)
         {
             if (_activeShift == null || !_activeShift.IsActive)
-                return;
+                return null;
 
             _activeShift.EndDateTime = DateTime.Now;
             _activeShift.DeclaredCash = declaredCash;
@@ -84,6 +101,20 @@ namespace RestaurantPOS.Services
             cmd.Parameters.AddWithValue("@Notes", notes ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@ShiftId", _activeShift.ShiftId);
             cmd.ExecuteNonQuery();
+
+            // Create shift ended event
+            _syncEventService.CreateEvent(EventTypes.ShiftEnded, new
+            {
+                ShiftId = _activeShift.ShiftGuid,
+                LocationId = _settings.LocationId == Guid.Empty ? (Guid?)null : _settings.LocationId,
+                EndDateTime = _activeShift.EndDateTime,
+                DeclaredCash = _activeShift.DeclaredCash,
+                ExpectedCash = _activeShift.ExpectedCash,
+                Difference = _activeShift.Difference,
+                Notes = _activeShift.Notes
+            });
+
+            return _activeShift;
         }
 
         private Shift LoadActiveShift()
@@ -92,7 +123,7 @@ namespace RestaurantPOS.Services
             connection.Open();
 
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = @"SELECT ShiftId, StartDateTime, EndDateTime, OpeningCash, DeclaredCash, 
+            cmd.CommandText = @"SELECT ShiftId, ShiftGuid, StartDateTime, EndDateTime, OpeningCash, DeclaredCash, 
                                        ExpectedCash, Difference, IsActive, UserId, Notes 
                                 FROM Shifts 
                                 WHERE IsActive = 1 
@@ -103,15 +134,16 @@ namespace RestaurantPOS.Services
                 return new Shift
                 {
                     ShiftId = reader.GetInt64(0),
-                    StartDateTime = DateTime.Parse(reader.GetString(1), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
-                    EndDateTime = reader.IsDBNull(2) ? null : DateTime.Parse(reader.GetString(2), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
-                    OpeningCash = Convert.ToDecimal(reader.GetValue(3)),
-                    DeclaredCash = reader.IsDBNull(4) ? null : Convert.ToDecimal(reader.GetValue(4)),
-                    ExpectedCash = reader.IsDBNull(5) ? null : Convert.ToDecimal(reader.GetValue(5)),
-                    Difference = reader.IsDBNull(6) ? null : Convert.ToDecimal(reader.GetValue(6)),
-                    IsActive = reader.GetInt32(7) == 1,
-                    UserId = reader.IsDBNull(8) ? null : reader.GetString(8),
-                    Notes = reader.IsDBNull(9) ? null : reader.GetString(9)
+                    ShiftGuid = reader.IsDBNull(1) ? Guid.NewGuid() : Guid.Parse(reader.GetString(1)),
+                    StartDateTime = DateTime.Parse(reader.GetString(2), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+                    EndDateTime = reader.IsDBNull(3) ? null : DateTime.Parse(reader.GetString(3), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+                    OpeningCash = Convert.ToDecimal(reader.GetValue(4)),
+                    DeclaredCash = reader.IsDBNull(5) ? null : Convert.ToDecimal(reader.GetValue(5)),
+                    ExpectedCash = reader.IsDBNull(6) ? null : Convert.ToDecimal(reader.GetValue(6)),
+                    Difference = reader.IsDBNull(7) ? null : Convert.ToDecimal(reader.GetValue(7)),
+                    IsActive = reader.GetInt32(8) == 1,
+                    UserId = reader.IsDBNull(9) ? null : reader.GetString(9),
+                    Notes = reader.IsDBNull(10) ? null : reader.GetString(10)
                 };
             }
 

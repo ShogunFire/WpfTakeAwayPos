@@ -62,7 +62,7 @@ namespace RestaurantPOS.ViewModels
             if (ActiveInventoryItem == null || Quantity <= 0 || string.IsNullOrWhiteSpace(SelectedRemovalReason))
                 return;
 
-            _inventoryService.TryConsume(ActiveInventoryItem.InventoryItemId, Quantity);
+            _inventoryService.TryConsume(ActiveInventoryItem.InventoryItemId, Quantity, SelectedRemovalReason);
             _popupService.Close();
         }
 

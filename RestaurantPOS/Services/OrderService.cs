@@ -1,7 +1,9 @@
 using Microsoft.Data.Sqlite;
+using RestaurantPOS.Configuration;
 using RestaurantPOS.Data;
 using RestaurantPOS.Models;
 using RestaurantPOS.Services.Interfaces;
+using RestaurantShared.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,10 +14,14 @@ namespace RestaurantPOS.Services
     public class OrderService
     {
         private readonly IShiftService _shiftService;
+        private readonly ISyncEventService _syncEventService;
+        private readonly PosSettings _settings;
 
-        public OrderService(IShiftService shiftService)
+        public OrderService(IShiftService shiftService, ISyncEventService syncEventService, PosSettings settings)
         {
             _shiftService = shiftService;
+            _syncEventService = syncEventService;
+            _settings = settings;
         }
 
         public void AddOrder(Order order)
@@ -52,6 +58,34 @@ namespace RestaurantPOS.Services
                 lineCmd.Parameters.AddWithValue("@Quantity", line.Quantity);
                 lineCmd.ExecuteNonQuery();
             }
+
+            var orderLines = order.OrderLines
+                .Where(line => line.Item != null)
+                .Select(line => new
+                {
+                    MenuItemId = line.Item.OriginalMenuItemId,
+                    MenuItemName = line.Item.Name,
+                    Quantity = line.Quantity,
+                    UnitPrice = line.Item.Price,
+                    LineTotal = line.Item.Price * line.Quantity
+                })
+                .ToList();
+
+            var activeShift = _shiftService.GetActiveShift();
+
+            _syncEventService.CreateEvent(EventTypes.OrderCompleted, new
+            {
+                OrderId = order.OrderGuid,
+                ShiftId = activeShift?.ShiftGuid,
+                LocationId = _settings.LocationId == Guid.Empty ? (Guid?)null : _settings.LocationId,
+                Subtotal = order.Subtotal,
+                Tax = order.Tax,
+                TotalAmount = order.TotalAmount,
+                TotalPaid = order.TotalPaid,
+                Remaining = order.Remaining,
+                TotalChange = order.TotalChange,
+                OrderLines = orderLines
+            });
         }
 
         public List<Order> GetAllOrders()

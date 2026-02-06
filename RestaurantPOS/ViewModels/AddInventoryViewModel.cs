@@ -77,7 +77,7 @@ namespace RestaurantPOS.ViewModels
                 return;
 
             // Add stock to inventory
-            _inventoryService.AddStock(ActiveInventoryItem.InventoryItemId, Quantity);
+            _inventoryService.AddStock(ActiveInventoryItem.InventoryItemId, Quantity, "Manual Add", TotalCost);
 
             // Record cost if entered
             if (TotalCost > 0)

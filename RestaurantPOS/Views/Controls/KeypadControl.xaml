@@ -72,7 +72,7 @@
             <!-- Row 4 -->
             <Button Grid.Row="3" Grid.Column="0" Content="." FontSize="32" Margin="5" Click="Decimal_Click"/>
             <Button Grid.Row="3" Grid.Column="1" Content="0" FontSize="32" Margin="5" Click="Number_Click"/>
-            <Button Grid.Row="3" Grid.Column="2" Content="⌫" FontSize="28" Margin="5" Click="Backspace_Click"/>
+            <Button Grid.Row="3" Grid.Column="2" Content="C" FontSize="32" Margin="5" Click="Clear_Click"/>
         </Grid>
     </Grid>
 </UserControl>

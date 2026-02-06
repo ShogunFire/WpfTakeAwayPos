@@ -1,0 +1,51 @@
+<UserControl x:Class="RestaurantPOS.Views.LoginView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+    <Grid Background="{StaticResource PageBackground}">
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="420">
+            <TextBlock Text="Login" FontSize="32" FontWeight="Bold" Foreground="{StaticResource TextMediumGray}" TextAlignment="Center" Margin="0,0,0,30"/>
+
+            <Border Background="{StaticResource BackgroundWhite}" CornerRadius="12" Padding="30">
+                <StackPanel>
+                    <TextBlock Text="Tap to open a new shift" FontSize="14" Foreground="{StaticResource TextDarkGray}" TextAlignment="Center" Margin="0,0,0,20"/>
+
+                    <Button Content="Login"
+                            Command="{Binding LoginCommand}"
+                            Background="{StaticResource PrimaryColor}"
+                            Foreground="White"
+                            FontSize="16"
+                            FontWeight="SemiBold"
+                            Padding="20,15"
+                            HorizontalAlignment="Stretch"
+                            Cursor="Hand">
+                        <Button.Resources>
+                            <Style TargetType="Button">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="{StaticResource PrimaryHoverColor}"/>
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter Property="Background" Value="{StaticResource ClickBackgroundBlue}"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Grid>
+</UserControl>

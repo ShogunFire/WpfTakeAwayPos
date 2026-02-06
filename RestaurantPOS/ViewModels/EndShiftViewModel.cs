@@ -10,6 +10,7 @@ namespace RestaurantPOS.ViewModels
         private readonly IPopupService _popupService;
         private readonly IShiftService _shiftService;
         private readonly INavigationService _navigationService;
+        private readonly ShiftSummaryViewModel _shiftSummaryViewModel;
 
         [ObservableProperty]
         private decimal keypadValue;
@@ -30,12 +31,14 @@ namespace RestaurantPOS.ViewModels
             ICashControlService cashControlService, 
             IPopupService popupService,
             IShiftService shiftService,
-            INavigationService navigationService)
+            INavigationService navigationService,
+            ShiftSummaryViewModel shiftSummaryViewModel)
         {
             _cashControlService = cashControlService;
             _popupService = popupService;
             _shiftService = shiftService;
             _navigationService = navigationService;
+            _shiftSummaryViewModel = shiftSummaryViewModel;
             RefreshData();
         }
 
@@ -43,13 +46,18 @@ namespace RestaurantPOS.ViewModels
         public void Submit()
         {
             // End the current shift with counted and expected cash
-            _shiftService.EndShift(KeypadValue, ExpectedCash, "");
+            var completedShift = _shiftService.EndShift(KeypadValue, ExpectedCash, "");
             
             _popupService.Close();
             KeypadValue = 0;
             
-            // Navigate back to main menu after ending shift
-            _navigationService.Navigate<MainMenuViewModel>();
+            // Load summary and navigate to shift summary
+            if (completedShift != null)
+            {
+                _shiftSummaryViewModel.LoadShiftSummary(completedShift);
+            }
+
+            _navigationService.Navigate<ShiftSummaryViewModel>();
         }
 
         [RelayCommand]
@@ -69,7 +77,7 @@ namespace RestaurantPOS.ViewModels
             SubmitCommand.NotifyCanExecuteChanged();
         }
 
-        private void RefreshData()
+        public void RefreshData()
         {
             OpeningFloat = _cashControlService.OpeningFloat;
             ExpectedCash = _cashControlService.ExpectedCash;

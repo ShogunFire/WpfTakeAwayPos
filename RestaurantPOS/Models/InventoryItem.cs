@@ -5,7 +5,6 @@ namespace RestaurantPOS.Models
 {
     public partial class InventoryItem : ObservableObject
     {
-        [ObservableProperty] private long id;
         [ObservableProperty] private Guid inventoryItemId;
         [ObservableProperty] private string name;
         [ObservableProperty] private decimal quantity;
@@ -13,9 +12,8 @@ namespace RestaurantPOS.Models
 
         public InventoryItem() { }
 
-        public InventoryItem(long id, string name, decimal quantity, string unit, Guid? inventoryItemId = null)
+        public InventoryItem(string name, decimal quantity, string unit, Guid? inventoryItemId = null)
         {
-            Id = id;
             InventoryItemId = inventoryItemId ?? Guid.NewGuid();
             Name = name;
             Quantity = quantity;

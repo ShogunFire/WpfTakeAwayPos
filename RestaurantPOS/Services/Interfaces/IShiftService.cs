@@ -6,7 +6,7 @@ namespace RestaurantPOS.Services.Interfaces
     {
         Shift GetActiveShift();
         Shift StartNewShift(decimal openingCash);
-        void EndShift(decimal declaredCash, decimal expectedCash, string notes = null);
+        Shift EndShift(decimal declaredCash, decimal expectedCash, string notes = null);
         long GetActiveShiftId();
     }
 }

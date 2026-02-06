@@ -5,6 +5,7 @@ namespace RestaurantPOS.Models
     public class Shift
     {
         public long ShiftId { get; set; }
+        public Guid ShiftGuid { get; set; } = Guid.NewGuid();
         public DateTime StartDateTime { get; set; }
         public DateTime? EndDateTime { get; set; }
         public decimal OpeningCash { get; set; }

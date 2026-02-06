@@ -20,5 +20,6 @@ namespace RestaurantPOS.Services.Interfaces
         
         IEnumerable<CashTransaction> GetTransactions();
         IEnumerable<CashTransaction> GetTransactionsByDate(DateTime date);
+        IEnumerable<CashTransaction> GetTransactionsByShift(long shiftId);
     }
 }

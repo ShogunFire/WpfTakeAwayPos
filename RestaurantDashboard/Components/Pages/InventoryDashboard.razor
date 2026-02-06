@@ -1,0 +1,378 @@
+@page "/inventory"
+@using RestaurantDashboard.Data.Services
+@inject AnalyticsService Analytics
+@rendermode InteractiveServer
+
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1>Inventory Dashboard</h1>
+        <div class="filters">
+            <select @bind="selectedLocationId" @bind:after="LoadDataAsync">
+                <option value="">All Locations</option>
+                @foreach (var location in locations)
+                {
+                    <option value="@location.Id">@location.Name</option>
+                }
+            </select>
+            <input type="text" @bind="searchText" @bind:after="FilterInventory" placeholder="Search items..." class="search-input" />
+            <button class="btn-primary" @onclick="LoadDataAsync">Refresh</button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading">Loading...</div>
+    }
+    else
+    {
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Total Items</div>
+                <div class="metric-value">@inventoryData.Count</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Low Stock Items</div>
+                <div class="metric-value warning">@lowStockCount</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Out of Stock</div>
+                <div class="metric-value negative">@outOfStockCount</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">In Stock</div>
+                <div class="metric-value positive">@inStockCount</div>
+            </div>
+        </div>
+
+        @if (filteredInventory.Any())
+        {
+            <div class="section">
+                <h2>Inventory Status</h2>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Item Name</th>
+                                <th>Current Quantity</th>
+                                <th>Unit</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in filteredInventory.OrderBy(i => i.Name))
+                            {
+                                var status = GetStockStatus(item.CurrentQuantity);
+                                <tr class="@status.CssClass">
+                                    <td><strong>@item.Name</strong></td>
+                                    <td class="quantity">@item.CurrentQuantity.ToString("N2")</td>
+                                    <td>@item.Unit</td>
+                                    <td>
+                                        <span class="status-badge @status.CssClass">@status.Label</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Stock Distribution</h2>
+                <div class="chart-container">
+                    <div class="stock-chart">
+                        <div class="stock-segment in-stock" style="width: @((inStockCount * 100.0 / inventoryData.Count))%">
+                            <span>In Stock: @inStockCount</span>
+                        </div>
+                        <div class="stock-segment low-stock" style="width: @((lowStockCount * 100.0 / inventoryData.Count))%">
+                            <span>Low Stock: @lowStockCount</span>
+                        </div>
+                        <div class="stock-segment out-of-stock" style="width: @((outOfStockCount * 100.0 / inventoryData.Count))%">
+                            <span>Out of Stock: @outOfStockCount</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="no-data">No inventory data found.</div>
+        }
+    }
+</div>
+
+<style>
+    .dashboard-container {
+        padding: 20px;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+
+    .dashboard-header h1 {
+        margin: 0;
+        font-size: 28px;
+    }
+
+    .filters {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .filters select, .filters input {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .search-input {
+        min-width: 200px;
+    }
+
+    .btn-primary {
+        padding: 8px 16px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    .btn-primary:hover {
+        background: #0056b3;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 40px;
+        font-size: 18px;
+        color: #666;
+    }
+
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .metric-card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .metric-label {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 8px;
+    }
+
+    .metric-value {
+        font-size: 32px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .metric-value.positive {
+        color: #28a745;
+    }
+
+    .metric-value.warning {
+        color: #ffc107;
+    }
+
+    .metric-value.negative {
+        color: #dc3545;
+    }
+
+    .section {
+        margin-bottom: 30px;
+    }
+
+    .section h2 {
+        font-size: 22px;
+        margin-bottom: 20px;
+    }
+
+    .table-container {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .data-table thead {
+        background: #f8f9fa;
+    }
+
+    .data-table th {
+        padding: 12px 16px;
+        text-align: left;
+        font-weight: 600;
+        color: #333;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .data-table td {
+        padding: 12px 16px;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .data-table td.quantity {
+        font-family: monospace;
+        font-weight: 600;
+    }
+
+    .data-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-badge.in-stock {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .status-badge.low-stock {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .status-badge.out-of-stock {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .chart-container {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .stock-chart {
+        display: flex;
+        height: 60px;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .stock-segment {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+
+    .stock-segment:hover {
+        opacity: 0.8;
+    }
+
+    .stock-segment.in-stock {
+        background: #28a745;
+    }
+
+    .stock-segment.low-stock {
+        background: #ffc107;
+    }
+
+    .stock-segment.out-of-stock {
+        background: #dc3545;
+    }
+
+    .no-data {
+        text-align: center;
+        padding: 60px;
+        font-size: 16px;
+        color: #999;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+</style>
+
+@code {
+    private List<Location> locations = new();
+    private string selectedLocationId = "";
+    private string searchText = "";
+    private bool isLoading = false;
+    
+    private List<InventoryStatus> inventoryData = new();
+    private List<InventoryStatus> filteredInventory = new();
+    private int lowStockCount = 0;
+    private int outOfStockCount = 0;
+    private int inStockCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        locations = await Analytics.GetLocationsAsync();
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var locationId = string.IsNullOrEmpty(selectedLocationId) ? (Guid?)null : Guid.Parse(selectedLocationId);
+            inventoryData = await Analytics.GetInventoryStatusAsync(locationId);
+            FilterInventory();
+            CalculateStats();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void FilterInventory()
+    {
+        filteredInventory = string.IsNullOrWhiteSpace(searchText)
+            ? inventoryData
+            : inventoryData.Where(i => i.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase)).ToList();
+        
+        StateHasChanged();
+    }
+
+    private void CalculateStats()
+    {
+        outOfStockCount = inventoryData.Count(i => i.CurrentQuantity <= 0);
+        lowStockCount = inventoryData.Count(i => i.CurrentQuantity > 0 && i.CurrentQuantity < 10);
+        inStockCount = inventoryData.Count(i => i.CurrentQuantity >= 10);
+    }
+
+    private (string Label, string CssClass) GetStockStatus(decimal quantity)
+    {
+        if (quantity <= 0) return ("Out of Stock", "out-of-stock");
+        if (quantity < 10) return ("Low Stock", "low-stock");
+        return ("In Stock", "in-stock");
+    }
+}

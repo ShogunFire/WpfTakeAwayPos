@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using RestaurantPOS.Data;
 using RestaurantPOS.Models;
 using RestaurantPOS.Services.Interfaces;
+using RestaurantShared.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -12,6 +13,7 @@ namespace RestaurantPOS.Services
     public class CashControlService : ICashControlService
     {
         private readonly IShiftService _shiftService;
+        private readonly ISyncEventService _syncEventService;
         private readonly List<CashTransaction> _transactions = new();
         private decimal _actualCash;
         private bool _isCounted;
@@ -22,10 +24,11 @@ namespace RestaurantPOS.Services
         {
             get
             {
-                return OpeningFloat + _transactions
+                var currentShiftTransactions = GetActiveShiftTransactions();
+                return OpeningFloat + currentShiftTransactions
                     .Where(t => t.Type == CashTransactionType.Sale || t.Type == CashTransactionType.Addition)
                     .Sum(t => t.Amount)
-                    - _transactions
+                    - currentShiftTransactions
                     .Where(t => t.Type == CashTransactionType.Removal)
                     .Sum(t => t.Amount);
             }
@@ -45,14 +48,12 @@ namespace RestaurantPOS.Services
 
         public bool IsCounted => _isCounted;
 
-        public CashControlService(IShiftService shiftService)
+        public CashControlService(IShiftService shiftService, ISyncEventService syncEventService)
         {
             _shiftService = shiftService;
+            _syncEventService = syncEventService;
             LoadTransactions();
-            if (_transactions.Count == 0)
-            {
-                AddOpeningFloat();
-            }
+            EnsureOpeningFloatForActiveShift();
         }
 
         public void RecordSale(decimal amount)
@@ -80,16 +81,16 @@ namespace RestaurantPOS.Services
 
         public void ResetShift()
         {
-            _transactions.Clear();
             _actualCash = 0;
             _isCounted = false;
-            ClearTransactions();
-            AddOpeningFloat();
+            SyncOpeningFloatFromShift();
+            EnsureOpeningFloatForActiveShift();
         }
 
         public IEnumerable<CashTransaction> GetTransactions()
         {
-            return _transactions.OrderByDescending(t => t.Timestamp);
+            return GetActiveShiftTransactions()
+                .OrderByDescending(t => t.Timestamp);
         }
 
         public IEnumerable<CashTransaction> GetTransactionsByDate(DateTime date)
@@ -97,6 +98,50 @@ namespace RestaurantPOS.Services
             return _transactions
                 .Where(t => t.Timestamp.Date == date.Date)
                 .OrderByDescending(t => t.Timestamp);
+        }
+
+        public IEnumerable<CashTransaction> GetTransactionsByShift(long shiftId)
+        {
+            return _transactions
+                .Where(t => t.ShiftId == shiftId)
+                .OrderByDescending(t => t.Timestamp);
+        }
+
+        private IEnumerable<CashTransaction> GetActiveShiftTransactions()
+        {
+            var activeShiftId = _shiftService.GetActiveShiftId();
+            if (activeShiftId <= 0)
+            {
+                return Enumerable.Empty<CashTransaction>();
+            }
+
+            return _transactions.Where(t => t.ShiftId == activeShiftId);
+        }
+
+        private void EnsureOpeningFloatForActiveShift()
+        {
+            var activeShiftId = _shiftService.GetActiveShiftId();
+            if (activeShiftId <= 0)
+            {
+                return;
+            }
+
+            SyncOpeningFloatFromShift();
+
+            var hasOpeningFloat = _transactions.Any(t => t.ShiftId == activeShiftId && t.Type == CashTransactionType.OpeningFloat);
+            if (!hasOpeningFloat)
+            {
+                AddOpeningFloat();
+            }
+        }
+
+        private void SyncOpeningFloatFromShift()
+        {
+            var activeShift = _shiftService.GetActiveShift();
+            if (activeShift != null && activeShift.OpeningCash > 0)
+            {
+                OpeningFloat = activeShift.OpeningCash;
+            }
         }
 
         private void AddOpeningFloat()
@@ -110,19 +155,21 @@ namespace RestaurantPOS.Services
             connection.Open();
 
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT ShiftId, Timestamp, Type, Amount, Reason, Description FROM CashTransactions ORDER BY Timestamp";
+            cmd.CommandText = "SELECT TransactionGuid, ShiftId, Timestamp, Type, Amount, Reason, Description FROM CashTransactions ORDER BY Timestamp";
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {
-                var shiftId = reader.IsDBNull(0) ? (long?)null : reader.GetInt64(0);
-                var timestampText = reader.GetString(1);
-                var type = (CashTransactionType)reader.GetInt32(2);
-                var amount = Convert.ToDecimal(reader.GetValue(3));
-                var reason = reader.IsDBNull(4) ? null : reader.GetString(4);
-                var description = reader.IsDBNull(5) ? null : reader.GetString(5);
+                var transactionGuid = reader.IsDBNull(0) ? Guid.NewGuid() : Guid.Parse(reader.GetString(0));
+                var shiftId = reader.IsDBNull(1) ? (long?)null : reader.GetInt64(1);
+                var timestampText = reader.GetString(2);
+                var type = (CashTransactionType)reader.GetInt32(3);
+                var amount = Convert.ToDecimal(reader.GetValue(4));
+                var reason = reader.IsDBNull(5) ? null : reader.GetString(5);
+                var description = reader.IsDBNull(6) ? null : reader.GetString(6);
 
                 var transaction = new CashTransaction(type, amount, reason)
                 {
+                    TransactionGuid = transactionGuid,
                     ShiftId = shiftId,
                     Timestamp = DateTime.Parse(timestampText, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
                     Description = description
@@ -140,8 +187,9 @@ namespace RestaurantPOS.Services
             connection.Open();
 
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = @"INSERT INTO CashTransactions (ShiftId, Timestamp, Type, Amount, Reason, Description)
-                                VALUES (@ShiftId, @Timestamp, @Type, @Amount, @Reason, @Description);";
+            cmd.CommandText = @"INSERT INTO CashTransactions (TransactionGuid, ShiftId, Timestamp, Type, Amount, Reason, Description)
+                                VALUES (@TransactionGuid, @ShiftId, @Timestamp, @Type, @Amount, @Reason, @Description);";
+            cmd.Parameters.AddWithValue("@TransactionGuid", transaction.TransactionGuid.ToString());
             cmd.Parameters.AddWithValue("@ShiftId", transaction.ShiftId ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@Timestamp", transaction.Timestamp.ToString("O"));
             cmd.Parameters.AddWithValue("@Type", (int)transaction.Type);
@@ -151,16 +199,19 @@ namespace RestaurantPOS.Services
             cmd.ExecuteNonQuery();
 
             _transactions.Add(transaction);
+
+            _syncEventService.CreateEvent(EventTypes.CashTransactionCreated, new
+            {
+                TransactionGuid = transaction.TransactionGuid,
+                ShiftId = (object)null,
+                Type = transaction.Type.ToString(),
+                transaction.Amount,
+                transaction.Reason,
+                transaction.Description,
+                transaction.Timestamp
+            });
         }
 
-        private void ClearTransactions()
-        {
-            using var connection = SqliteDb.CreateConnection();
-            connection.Open();
-
-            using var cmd = connection.CreateCommand();
-            cmd.CommandText = "DELETE FROM CashTransactions";
-            cmd.ExecuteNonQuery();
-        }
+        // NOTE: We keep historical transactions per shift. No global delete.
     }
 }

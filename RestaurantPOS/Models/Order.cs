@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -9,6 +10,7 @@ namespace RestaurantPOS.Models
 {
     public partial class Order : ObservableObject
     {
+        [ObservableProperty] private Guid orderGuid = Guid.NewGuid();
         [ObservableProperty] private int orderId;
         [ObservableProperty] private long? shiftId;
         [ObservableProperty] private decimal subtotal;
@@ -77,7 +79,7 @@ namespace RestaurantPOS.Models
             }
         }
 
-        private void CalculateTotal()
+        public void CalculateTotal()
         {
             // Calculate total (price includes tax)
             TotalAmount = OrderLines.Sum(i => i.Item != null ? i.Item.Price * (i.Quantity > 0 ? i.Quantity : 1) : 0m);

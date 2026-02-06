@@ -7,12 +7,6 @@ public class DashboardMetrics
     public decimal AverageCheck { get; set; }
 }
 
-public class SalesDataPoint
-{
-    public string Date { get; set; } = "";
-    public decimal Sales { get; set; }
-}
-
 public class TopItem
 {
     public string Name { get; set; } = "";

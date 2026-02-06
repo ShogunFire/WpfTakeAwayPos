@@ -1,5 +1,9 @@
+using System;
+
 public class Payment
 {
+    public Guid PaymentGuid { get; set; } = Guid.NewGuid();
+    public Guid OrderGuid { get; set; }
     public int PaymentId { get; set; }
     public int OrderId { get; set; }
     public decimal Amount { get; set; }

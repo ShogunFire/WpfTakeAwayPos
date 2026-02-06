@@ -98,6 +98,11 @@ namespace RestaurantPOS.Views.Controls
             Backspace();
         }
 
+        private void Clear_Click(object sender, RoutedEventArgs e)
+        {
+            Clear();
+        }
+
         private void NumberClick(string digit)
         {
             _buffer = _buffer == "0" ? digit : _buffer + digit;
@@ -114,6 +119,12 @@ namespace RestaurantPOS.Views.Controls
         private void Backspace()
         {
             _buffer = _buffer.Length > 1 ? _buffer[..^1] : "0";
+            UpdateValue();
+        }
+
+        private void Clear()
+        {
+            _buffer = "0";
             UpdateValue();
         }
 

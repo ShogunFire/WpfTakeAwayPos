@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using RestaurantPOS.Models;
 using RestaurantPOS.Services;
 using RestaurantPOS.Services.Interfaces;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -19,6 +20,8 @@ namespace RestaurantPOS.ViewModels
         private readonly IDialogService _dialogService;
         private readonly IInventoryService _inventoryService;
         private readonly ICashControlService _cashControlService;
+        private readonly OrderService _orderService;
+        private readonly PaymentService _paymentService;
         private readonly IOrderSession _orderSession;
         public IOrderSession OrderSession => _orderSession;
 
@@ -36,12 +39,50 @@ namespace RestaurantPOS.ViewModels
         [ObservableProperty]
         private decimal totalCashReceived;
 
-        public PaymentViewModel(INavigationService navigationService, IDialogService dialogService, IInventoryService inventoryService, ICashControlService cashControlService, IOrderSession orderSession)
+        [ObservableProperty]
+        private decimal exactRemaining;
+
+        [ObservableProperty]
+        private string exactRemainingDisplay = "Exact";
+
+        [ObservableProperty]
+        private decimal nextMultipleOf20;
+
+        [ObservableProperty]
+        private string nextMultipleOf20Display = "$20";
+
+        [ObservableProperty]
+        private decimal nextMultipleOf50;
+
+        [ObservableProperty]
+        private string nextMultipleOf50Display = "$50";
+
+        [ObservableProperty]
+        private decimal nextMultipleOf100;
+
+        [ObservableProperty]
+        private string nextMultipleOf100Display = "$100";
+
+        [ObservableProperty]
+        private decimal nextMultipleOf200;
+
+        [ObservableProperty]
+        private string nextMultipleOf200Display = "$200";
+
+        [ObservableProperty]
+        private decimal nextMultipleOf500;
+
+        [ObservableProperty]
+        private string nextMultipleOf500Display = "$500";
+
+        public PaymentViewModel(INavigationService navigationService, IDialogService dialogService, IInventoryService inventoryService, ICashControlService cashControlService, OrderService orderService, PaymentService paymentService, IOrderSession orderSession)
         {
             _navigationService = navigationService;
             _dialogService = dialogService;
             _inventoryService = inventoryService;
             _cashControlService = cashControlService;
+            _orderService = orderService;
+            _paymentService = paymentService;
             _orderSession = orderSession;
             
             // Subscribe to order changes
@@ -60,6 +101,59 @@ namespace RestaurantPOS.ViewModels
        
 
        
+        [RelayCommand]
+        private void SetPaymentAmount(decimal amount)
+        {
+            if (amount > 0)
+            {
+                InputDisplay = amount.ToString("F2");
+            }
+        }
+
+        private void CalculateQuickPayAmounts()
+        {
+            var remaining = _orderSession.CurrentOrder.Remaining;
+            if (remaining <= 0)
+            {
+                ExactRemaining = 0;
+                ExactRemainingDisplay = "Paid";
+                NextMultipleOf20 = 0;
+                NextMultipleOf20Display = "$20";
+                NextMultipleOf50 = 0;
+                NextMultipleOf50Display = "$50";
+                NextMultipleOf100 = 0;
+                NextMultipleOf100Display = "$100";
+                NextMultipleOf200 = 0;
+                NextMultipleOf200Display = "$200";
+                NextMultipleOf500 = 0;
+                NextMultipleOf500Display = "$500";
+                return;
+            }
+
+            ExactRemaining = remaining;
+            ExactRemainingDisplay = "Exact";
+
+            NextMultipleOf20 = RoundUpToMultiple(remaining, 20);
+            NextMultipleOf20Display = $"${NextMultipleOf20:F2}";
+
+            NextMultipleOf50 = RoundUpToMultiple(remaining, 50);
+            NextMultipleOf50Display = $"${NextMultipleOf50:F2}";
+
+            NextMultipleOf100 = RoundUpToMultiple(remaining, 100);
+            NextMultipleOf100Display = $"${NextMultipleOf100:F2}";
+
+            NextMultipleOf200 = RoundUpToMultiple(remaining, 200);
+            NextMultipleOf200Display = $"${NextMultipleOf200:F2}";
+
+            NextMultipleOf500 = RoundUpToMultiple(remaining, 500);
+            NextMultipleOf500Display = $"${NextMultipleOf500:F2}";
+        }
+
+        private decimal RoundUpToMultiple(decimal value, decimal multiple)
+        {
+            return Math.Ceiling(value / multiple) * multiple;
+        }
+
         [RelayCommand]
         private void CashPayment()
         {
@@ -115,6 +209,7 @@ namespace RestaurantPOS.ViewModels
         {
             if (_orderSession.CurrentOrder.Remaining <= 0)
             {
+                // Consume inventory for each item in the order
                 foreach (var line in _orderSession.CurrentOrder.OrderLines)
                 {
                     var item = line.Item;
@@ -124,15 +219,34 @@ namespace RestaurantPOS.ViewModels
                     foreach (var component in item.Components)
                     {
                         var totalUsed = component.QuantityUsed * line.Quantity;
-                        _inventoryService.TryConsume(component.InventoryItemId, totalUsed);
+                        _inventoryService.TryConsume(component.InventoryItemId, totalUsed, "Sale");
                     }
+                }
+
+                // Save the completed order
+                _orderService.AddOrder(_orderSession.CurrentOrder);
+
+                // Process each payment
+                foreach (var paymentEntry in PaymentEntries)
+                {
+                    var payment = new Payment
+                    {
+                        PaymentGuid = Guid.NewGuid(),
+                        OrderGuid = _orderSession.CurrentOrder.OrderGuid,
+                        OrderId = _orderSession.CurrentOrder.OrderId,
+                        Amount = paymentEntry.Amount,
+                        PaymentMethod = paymentEntry.PaymentMethod ?? "Unknown"
+                    };
+
+                    _paymentService.ProcessPayment(payment);
                 }
 
                 // Record cash payments to cash control
                 var cashPayments = PaymentEntries.Where(p => p.PaymentMethod == "Cash").Sum(p => p.Amount);
-                if (cashPayments > 0)
+                var netCash = Math.Max(0m, cashPayments - _orderSession.CurrentOrder.TotalChange);
+                if (netCash > 0)
                 {
-                    _cashControlService.RecordSale(cashPayments);
+                    _cashControlService.RecordSale(netCash);
                 }
 
                 // Show completion dialog
@@ -182,6 +296,9 @@ namespace RestaurantPOS.ViewModels
             
             // Calculate total cash received and change
             TotalCashReceived = PaymentEntries.Where(p => p.PaymentMethod == "Cash").Sum(p => p.CashReceived);
+
+            // Update quick pay amount buttons
+            CalculateQuickPayAmounts();
         }
     }
 

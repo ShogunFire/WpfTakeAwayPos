@@ -19,7 +19,7 @@ namespace RestaurantPOS.Services
             return null;
         }
 
-        public bool TryConsume(Guid inventoryItemId, decimal quantity)
+        public bool TryConsume(Guid inventoryItemId, decimal quantity, string reason = null)
         {
             return true;
         }
@@ -29,7 +29,7 @@ namespace RestaurantPOS.Services
             return null;
         }
 
-        public void AddStock(Guid inventoryItemId, decimal quantity)
+        public void AddStock(Guid inventoryItemId, decimal quantity, string reason = null, decimal? totalCost = null)
         {
             // no-op
         }

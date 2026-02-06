@@ -27,18 +27,100 @@
                     Padding="15">
                 <Grid>
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <controls:KeypadControl Grid.Row="0"
+                    <!-- Quick Payment Amount Buttons -->
+                    <Grid Grid.Row="0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Row="0" Grid.Column="0"
+                                Content="{Binding ExactRemainingDisplay}"
+                                FontSize="12"
+                                FontWeight="Bold"
+                                Background="{DynamicResource InfoColor}"
+                                Foreground="{DynamicResource TextBlack}"
+                                Height="40"
+                                Margin="2,0,2,5"
+                                Command="{Binding SetPaymentAmountCommand}"
+                                CommandParameter="{Binding ExactRemaining}"/>
+
+                        <Button Grid.Row="0" Grid.Column="1"
+                                Content="{Binding NextMultipleOf20Display}"
+                                FontSize="12"
+                                FontWeight="Bold"
+                                Background="{DynamicResource InfoColor}"
+                                Foreground="{DynamicResource TextBlack}"
+                                Height="40"
+                                Margin="2,0,2,5"
+                                Command="{Binding SetPaymentAmountCommand}"
+                                CommandParameter="{Binding NextMultipleOf20}"/>
+
+                        <Button Grid.Row="0" Grid.Column="2"
+                                Content="{Binding NextMultipleOf50Display}"
+                                FontSize="12"
+                                FontWeight="Bold"
+                                Background="{DynamicResource InfoColor}"
+                                Foreground="{DynamicResource TextBlack}"
+                                Height="40"
+                                Margin="2,0,2,5"
+                                Command="{Binding SetPaymentAmountCommand}"
+                                CommandParameter="{Binding NextMultipleOf50}"/>
+
+                        <Button Grid.Row="1" Grid.Column="0"
+                                Content="{Binding NextMultipleOf100Display}"
+                                FontSize="12"
+                                FontWeight="Bold"
+                                Background="{DynamicResource InfoColor}"
+                                Foreground="{DynamicResource TextBlack}"
+                                Height="40"
+                                Margin="2,0,2,5"
+                                Command="{Binding SetPaymentAmountCommand}"
+                                CommandParameter="{Binding NextMultipleOf100}"/>
+
+                        <Button Grid.Row="1" Grid.Column="1"
+                                Content="{Binding NextMultipleOf200Display}"
+                                FontSize="12"
+                                FontWeight="Bold"
+                                Background="{DynamicResource InfoColor}"
+                                Foreground="{DynamicResource TextBlack}"
+                                Height="40"
+                                Margin="2,0,2,5"
+                                Command="{Binding SetPaymentAmountCommand}"
+                                CommandParameter="{Binding NextMultipleOf200}"/>
+
+                        <Button Grid.Row="1" Grid.Column="2"
+                                Content="{Binding NextMultipleOf500Display}"
+                                FontSize="12"
+                                FontWeight="Bold"
+                                Background="{DynamicResource InfoColor}"
+                                Foreground="{DynamicResource TextBlack}"
+                                Height="40"
+                                Margin="2,0,2,5"
+                                Command="{Binding SetPaymentAmountCommand}"
+                                CommandParameter="{Binding NextMultipleOf500}"/>
+                    </Grid>
+
+                    <controls:KeypadControl Grid.Row="1"
                                             Margin="0,0,0,15"
                                             UnitLabel="$"
                                             IsPrefix="True"
                                             Value="{Binding InputDisplay}"/>
 
+                   
+
                     <!-- Payment Method Buttons -->
-                    <Grid Grid.Row="1">
+                    <Grid Grid.Row="2">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>

@@ -40,8 +40,8 @@ namespace RestaurantPOS.Services
         {
             CurrentViewModel = serviceProvider.GetRequiredService<TViewModel>();
             
-            // Show home button for all views except MainMenuViewModel
-            ShowHomeButton = !(CurrentViewModel is MainMenuViewModel);
+            // Show home button for all views except MainMenuViewModel and LoginViewModel
+            ShowHomeButton = !(CurrentViewModel is MainMenuViewModel || CurrentViewModel is LoginViewModel);
 
             // Fire the event whenever CurrentViewModel changes
             CurrentViewModelChanged?.Invoke();

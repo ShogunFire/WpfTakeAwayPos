@@ -110,6 +110,7 @@ namespace RestaurantPOS.ViewModels
             if (parameter is OrderLine line)
             {
                 line.Quantity += 1;
+                _orderSession.CurrentOrder.CalculateTotal();
             }
         }
 
@@ -121,6 +122,7 @@ namespace RestaurantPOS.ViewModels
                 if (line.Quantity > 1)
                 {
                     line.Quantity -= 1;
+                    _orderSession.CurrentOrder.CalculateTotal();
                 }
                 else
                 {

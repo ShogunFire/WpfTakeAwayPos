@@ -9,6 +9,6 @@ namespace RestaurantPOS.Services
         private bool inventoryModuleEnabled = true;
 
         [ObservableProperty]
-        private bool inventoryCostModuleEnabled = false;
+        private bool inventoryCostModuleEnabled = true;
     }
 }

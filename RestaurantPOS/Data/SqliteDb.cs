@@ -31,7 +31,59 @@ namespace RestaurantPOS.Data
             connection.Open();
 
             CreateTables(connection);
+            EnsureCashTransactionGuidColumn(connection);
+            EnsureShiftGuidColumn(connection);
             SeedIfEmpty(connection);
+        }
+
+        private static void EnsureShiftGuidColumn(SqliteConnection connection)
+        {
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "PRAGMA table_info(Shifts);";
+
+            using var reader = cmd.ExecuteReader();
+            var hasColumn = false;
+            while (reader.Read())
+            {
+                var columnName = reader.GetString(1);
+                if (string.Equals(columnName, "ShiftGuid", StringComparison.OrdinalIgnoreCase))
+                {
+                    hasColumn = true;
+                    break;
+                }
+            }
+
+            if (!hasColumn)
+            {
+                using var alterCmd = connection.CreateCommand();
+                alterCmd.CommandText = "ALTER TABLE Shifts ADD COLUMN ShiftGuid TEXT;";
+                alterCmd.ExecuteNonQuery();
+            }
+        }
+
+        private static void EnsureCashTransactionGuidColumn(SqliteConnection connection)
+        {
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "PRAGMA table_info(CashTransactions);";
+
+            using var reader = cmd.ExecuteReader();
+            var hasColumn = false;
+            while (reader.Read())
+            {
+                var columnName = reader.GetString(1);
+                if (string.Equals(columnName, "TransactionGuid", StringComparison.OrdinalIgnoreCase))
+                {
+                    hasColumn = true;
+                    break;
+                }
+            }
+
+            if (!hasColumn)
+            {
+                using var alterCmd = connection.CreateCommand();
+                alterCmd.CommandText = "ALTER TABLE CashTransactions ADD COLUMN TransactionGuid TEXT;";
+                alterCmd.ExecuteNonQuery();
+            }
         }
 
         private static void CreateTables(SqliteConnection connection)
@@ -39,27 +91,30 @@ namespace RestaurantPOS.Data
             var commands = new List<string>
             {
                 @"CREATE TABLE IF NOT EXISTS InventoryItems (
-                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    InventoryItemId TEXT NOT NULL,
+                    Id TEXT PRIMARY KEY,
                     Name TEXT NOT NULL,
-                    Quantity REAL NOT NULL,
-                    Unit TEXT NOT NULL
+                    Unit TEXT NOT NULL,
+                    Quantity REAL NOT NULL DEFAULT 0
                 );",
                 @"CREATE TABLE IF NOT EXISTS MenuItems (
-                    MenuItemId INTEGER PRIMARY KEY,
-                    MenuItemGuid TEXT NOT NULL,
-                    CategoryId INTEGER NOT NULL,
+                    Id TEXT PRIMARY KEY,
                     Name TEXT NOT NULL,
-                    Price REAL NOT NULL
+                    Description TEXT,
+                    Price REAL NOT NULL,
+                    Category TEXT NOT NULL,
+                    IsActive INTEGER NOT NULL DEFAULT 1
                 );",
                 @"CREATE TABLE IF NOT EXISTS MenuItemComponents (
-                    MenuItemId INTEGER NOT NULL,
+                    Id TEXT PRIMARY KEY,
+                    MenuItemId TEXT NOT NULL,
                     InventoryItemId TEXT NOT NULL,
-                    QuantityUsed REAL NOT NULL,
-                    FOREIGN KEY(MenuItemId) REFERENCES MenuItems(MenuItemId)
+                    Quantity REAL NOT NULL,
+                    FOREIGN KEY(MenuItemId) REFERENCES MenuItems(Id),
+                    FOREIGN KEY(InventoryItemId) REFERENCES InventoryItems(Id)
                 );",
                 @"CREATE TABLE IF NOT EXISTS CashTransactions (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    TransactionGuid TEXT,
                     ShiftId INTEGER,
                     Timestamp TEXT NOT NULL,
                     Type INTEGER NOT NULL,
@@ -114,6 +169,14 @@ namespace RestaurantPOS.Data
                     IsActive INTEGER NOT NULL DEFAULT 1,
                     UserId TEXT,
                     Notes TEXT
+                );",
+                @"CREATE TABLE IF NOT EXISTS SyncEvents (
+                    Id TEXT PRIMARY KEY,
+                    Type TEXT NOT NULL,
+                    Payload TEXT NOT NULL,
+                    CreatedAt TEXT NOT NULL,
+                    SyncedAt TEXT NULL,
+                    DeviceId TEXT NOT NULL
                 );"
             };
 
@@ -127,109 +190,14 @@ namespace RestaurantPOS.Data
 
         private static void SeedIfEmpty(SqliteConnection connection)
         {
-            using var countCmd = connection.CreateCommand();
-            countCmd.CommandText = "SELECT COUNT(1) FROM InventoryItems";
-            var inventoryCount = Convert.ToInt32(countCmd.ExecuteScalar());
-
-            if (inventoryCount == 0)
-            {
-                SeedInventory(connection);
-            }
-
-            using var menuCountCmd = connection.CreateCommand();
-            menuCountCmd.CommandText = "SELECT COUNT(1) FROM MenuItems";
-            var menuCount = Convert.ToInt32(menuCountCmd.ExecuteScalar());
-
-            if (menuCount == 0)
-            {
-                SeedMenu(connection);
-            }
-        }
-
-        private static void SeedInventory(SqliteConnection connection)
-        {
-            var items = new (string Name, decimal Quantity, string Unit, Guid InventoryItemId)[]
-            {
-                ("Chicken", 50m, "unit", Guid.Parse("11111111-1111-1111-1111-111111111111")),
-                ("Fries", 20m, "kg", Guid.Parse("22222222-2222-2222-2222-222222222222")),
-                ("Coca-Cola", 100m, "bottle", Guid.Parse("33333333-3333-3333-3333-333333333333"))
-            };
-
-            foreach (var item in items)
-            {
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = @"INSERT INTO InventoryItems (InventoryItemId, Name, Quantity, Unit)
-                                    VALUES (@InventoryItemId, @Name, @Quantity, @Unit);";
-                cmd.Parameters.AddWithValue("@InventoryItemId", item.InventoryItemId.ToString());
-                cmd.Parameters.AddWithValue("@Name", item.Name);
-                cmd.Parameters.AddWithValue("@Quantity", item.Quantity);
-                cmd.Parameters.AddWithValue("@Unit", item.Unit);
-                cmd.ExecuteNonQuery();
-            }
-        }
-
-        private static void SeedMenu(SqliteConnection connection)
-        {
-            var menuItems = new List<(int MenuItemId, int CategoryId, string Name, decimal Price, List<(string InventoryName, decimal Qty)> Components)>
-            {
-                (1, 2, "Bruschetta", 6.50m, new List<(string, decimal)>()),
-                (2, 2, "Calamari", 8.99m, new List<(string, decimal)>()),
-                (3, 2, "Chicken Wings", 9.50m, new List<(string, decimal)>{ ("Chicken", 0.25m) }),
-                (4, 2, "Nachos", 7.99m, new List<(string, decimal)>{ ("Fries", 0.15m) }),
-                (5, 3, "Classic Cheeseburger", 12.50m, new List<(string, decimal)>{ ("Chicken", 0.25m), ("Fries", 0.15m) }),
-                (6, 3, "Spicy Chicken Sandwich", 11.00m, new List<(string, decimal)>{ ("Chicken", 0.20m) }),
-                (7, 3, "Bacon Burger", 13.99m, new List<(string, decimal)>{ ("Chicken", 0.30m), ("Fries", 0.10m) }),
-                (8, 3, "Double Burger", 15.50m, new List<(string, decimal)>{ ("Chicken", 0.40m), ("Fries", 0.20m) }),
-                (9, 3, "Veggie Burger", 10.99m, new List<(string, decimal)>()),
-                (10, 4, "Margherita Pizza", 14.99m, new List<(string, decimal)>()),
-                (11, 4, "Pepperoni Pizza", 15.99m, new List<(string, decimal)>()),
-                (12, 4, "Veggie Pizza", 14.49m, new List<(string, decimal)>()),
-                (13, 4, "BBQ Pizza", 16.99m, new List<(string, decimal)>{ ("Chicken", 0.10m) }),
-                (14, 5, "Coca-Cola", 2.75m, new List<(string, decimal)>{ ("Coca-Cola", 1m) }),
-                (15, 5, "Sprite", 2.75m, new List<(string, decimal)>()),
-                (16, 5, "Orange Juice", 3.99m, new List<(string, decimal)>()),
-                (17, 5, "Iced Tea", 2.99m, new List<(string, decimal)>()),
-                (18, 5, "Lemonade", 3.49m, new List<(string, decimal)>()),
-                (19, 5, "Water", 1.99m, new List<(string, decimal)>()),
-                (20, 1, "Large Fries", 4.50m, new List<(string, decimal)>{ ("Fries", 0.20m) }),
-                (21, 1, "Onion Rings", 4.99m, new List<(string, decimal)>{ ("Fries", 0.15m) }),
-                (22, 1, "Mozzarella Sticks", 5.99m, new List<(string, decimal)>()),
-            };
-
-            foreach (var menu in menuItems)
-            {
-                var menuGuid = Guid.NewGuid();
-                using var insertMenu = connection.CreateCommand();
-                insertMenu.CommandText = @"INSERT INTO MenuItems (MenuItemId, MenuItemGuid, CategoryId, Name, Price)
-                                          VALUES (@MenuItemId, @MenuItemGuid, @CategoryId, @Name, @Price);";
-                insertMenu.Parameters.AddWithValue("@MenuItemId", menu.MenuItemId);
-                insertMenu.Parameters.AddWithValue("@MenuItemGuid", menuGuid.ToString());
-                insertMenu.Parameters.AddWithValue("@CategoryId", menu.CategoryId);
-                insertMenu.Parameters.AddWithValue("@Name", menu.Name);
-                insertMenu.Parameters.AddWithValue("@Price", menu.Price);
-                insertMenu.ExecuteNonQuery();
-
-                foreach (var component in menu.Components)
-                {
-                    var inventoryId = GetInventoryIdByName(connection, component.InventoryName);
-                    if (inventoryId == Guid.Empty)
-                        continue;
-
-                    using var insertComponent = connection.CreateCommand();
-                    insertComponent.CommandText = @"INSERT INTO MenuItemComponents (MenuItemId, InventoryItemId, QuantityUsed)
-                                                   VALUES (@MenuItemId, @InventoryItemId, @QuantityUsed);";
-                    insertComponent.Parameters.AddWithValue("@MenuItemId", menu.MenuItemId);
-                    insertComponent.Parameters.AddWithValue("@InventoryItemId", inventoryId.ToString());
-                    insertComponent.Parameters.AddWithValue("@QuantityUsed", component.Qty);
-                    insertComponent.ExecuteNonQuery();
-                }
-            }
+            // No longer seed inventory items or menu items
+            // These will be synced from the server instead
         }
 
         private static Guid GetInventoryIdByName(SqliteConnection connection, string name)
         {
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT InventoryItemId FROM InventoryItems WHERE Name = @Name LIMIT 1";
+            cmd.CommandText = "SELECT Id FROM InventoryItems WHERE Name = @Name LIMIT 1";
             cmd.Parameters.AddWithValue("@Name", name);
             var result = cmd.ExecuteScalar() as string;
             return Guid.TryParse(result, out var id) ? id : Guid.Empty;

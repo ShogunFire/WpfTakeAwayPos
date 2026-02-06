@@ -1,5 +1,7 @@
 using Microsoft.Data.Sqlite;
 using RestaurantPOS.Data;
+using RestaurantPOS.Services.Interfaces;
+using RestaurantShared.DTOs;
 using System;
 using System.Collections.Generic;
 
@@ -7,6 +9,13 @@ namespace RestaurantPOS.Services
 {
     public class PaymentService
     {
+        private readonly ISyncEventService _syncEventService;
+
+        public PaymentService(ISyncEventService syncEventService)
+        {
+            _syncEventService = syncEventService;
+        }
+
         public bool ProcessPayment(Payment payment)
         {
             // Logic to process the payment
@@ -27,6 +36,14 @@ namespace RestaurantPOS.Services
             cmd.Parameters.AddWithValue("@Amount", payment.Amount);
             cmd.Parameters.AddWithValue("@PaymentMethod", payment.PaymentMethod ?? string.Empty);
             payment.PaymentId = (int)(long)cmd.ExecuteScalar();
+
+            _syncEventService.CreateEvent(EventTypes.PaymentProcessed, new
+            {
+                PaymentId = payment.PaymentGuid,
+                OrderId = payment.OrderGuid,
+                payment.Amount,
+                payment.PaymentMethod
+            });
 
             return true; // Assume payment is successful
         }

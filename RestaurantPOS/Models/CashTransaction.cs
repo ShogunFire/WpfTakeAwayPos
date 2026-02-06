@@ -4,6 +4,7 @@ namespace RestaurantPOS.Models
 {
     public class CashTransaction
     {
+        public Guid TransactionGuid { get; set; }
         public long? ShiftId { get; set; }
         public DateTime Timestamp { get; set; }
         public CashTransactionType Type { get; set; }
@@ -13,6 +14,7 @@ namespace RestaurantPOS.Models
 
         public CashTransaction(CashTransactionType type, decimal amount, string reason = null)
         {
+            TransactionGuid = Guid.NewGuid();
             Timestamp = DateTime.Now;
             Type = type;
             Amount = amount;
