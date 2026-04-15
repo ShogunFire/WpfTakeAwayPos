@@ -39,13 +39,14 @@ public class ProcessedEventRepository : IProcessedEventRepository
                 SET EventType = @EventType,
                     Payload = @Payload,
                     DeviceId = @DeviceId,
+                    LocationId = @LocationId,
                     ReceivedAt = COALESCE(ReceivedAt, @ReceivedAt)
                 WHERE Id = @Id;
             END
             ELSE
             BEGIN
-                INSERT INTO ProcessedEvents (Id, EventType, Payload, Status, ErrorMessage, ReceivedAt, LastAttemptAt, AttemptCount, ProcessedAt, DeviceId)
-                VALUES (@Id, @EventType, @Payload, @Status, @ErrorMessage, @ReceivedAt, @LastAttemptAt, @AttemptCount, @ProcessedAt, @DeviceId);
+                INSERT INTO ProcessedEvents (Id, EventType, Payload, Status, ErrorMessage, ReceivedAt, LastAttemptAt, AttemptCount, ProcessedAt, DeviceId, LocationId)
+                VALUES (@Id, @EventType, @Payload, @Status, @ErrorMessage, @ReceivedAt, @LastAttemptAt, @AttemptCount, @ProcessedAt, @DeviceId, @LocationId);
             END;";
 
         await connection.ExecuteAsync(sql, processedEvent);

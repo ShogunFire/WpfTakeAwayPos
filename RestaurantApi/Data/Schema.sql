@@ -80,11 +80,20 @@ BEGIN
         LastAttemptAt DATETIME2 NULL,
         AttemptCount INT NOT NULL DEFAULT(0),
         ProcessedAt DATETIME2 NULL,
-        DeviceId NVARCHAR(255) NULL
+        DeviceId NVARCHAR(255) NULL,
+        LocationId UNIQUEIDENTIFIER NULL
     );
     
     CREATE INDEX IX_ProcessedEvents_Status ON ProcessedEvents(Status);
     CREATE INDEX IX_ProcessedEvents_ReceivedAt ON ProcessedEvents(ReceivedAt);
+END
+ELSE
+BEGIN
+    -- Add LocationId column if it doesn't exist
+    IF NOT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ProcessedEvents' AND COLUMN_NAME = 'LocationId')
+    BEGIN
+        ALTER TABLE ProcessedEvents ADD LocationId UNIQUEIDENTIFIER NULL;
+    END
 END;
 
 -- InventoryItems table (master data, no shift)

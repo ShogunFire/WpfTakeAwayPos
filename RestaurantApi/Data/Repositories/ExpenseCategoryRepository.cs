@@ -56,7 +56,7 @@ public class ExpenseCategoryRepository : IExpenseCategoryRepository
     public async Task<bool> UpdateAsync(ExpenseCategory category)
     {
         using IDbConnection connection = new SqlConnection(_connectionString);
-        category.UpdatedAt = DateTime.UtcNow;
+        category.UpdatedAt = DateTime.Now;
         var sql = @"
             UPDATE ExpenseCategories 
             SET Name = @Name,

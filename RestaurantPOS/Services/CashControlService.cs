@@ -68,7 +68,7 @@ namespace RestaurantPOS.Services
         public void RemoveCash(decimal amount, string reason, bool isExpense = false, Guid? relatedInventoryCostRecordId = null)
         {
             if (amount <= 0) return;
-            InsertTransaction(new CashTransaction(CashTransactionType.Removal, amount, reason, isExpense, relatedInventoryCostRecordId, _settings?.LocationId));
+            InsertTransaction(new CashTransaction(CashTransactionType.Removal, amount, reason, isExpense, relatedInventoryCostRecordId));
         }
 
         public void AddCash(decimal amount, string reason)
@@ -213,8 +213,7 @@ namespace RestaurantPOS.Services
                 transaction.Description,
                 transaction.Timestamp,
                 transaction.IsExpense,
-                transaction.RelatedInventoryCostRecordId,
-                transaction.LocationId
+                transaction.RelatedInventoryCostRecordId
             });
         }
 

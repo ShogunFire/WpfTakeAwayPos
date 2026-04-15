@@ -58,16 +58,6 @@ namespace RestaurantPOS.Services
                 {
                     SaveMenuItemComponents(components);
                 }
-
-                // Sync location-specific inventory quantities if location is set
-                if (_settings.LocationId != Guid.Empty)
-                {
-                    var locationInventory = await FetchLocationInventoryAsync();
-                    if (locationInventory != null && locationInventory.Any())
-                    {
-                        UpdateInventoryQuantities(locationInventory);
-                    }
-                }
             }
             catch (Exception ex)
             {
@@ -136,20 +126,7 @@ namespace RestaurantPOS.Services
             }
         }
 
-        private async Task<IEnumerable<InventoryItemDto>?> FetchLocationInventoryAsync()
-        {
-            try
-            {
-                var response = await _httpClient.GetAsync($"api/locations/{_settings.LocationId}/inventory");
-                response.EnsureSuccessStatusCode();
-                return await response.Content.ReadFromJsonAsync<IEnumerable<InventoryItemDto>>();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error fetching location inventory: {ex.Message}");
-                return null;
-            }
-        }
+
 
         private void SaveCategories(IEnumerable<CategoryDto> categories)
         {
@@ -330,39 +307,6 @@ namespace RestaurantPOS.Services
             }
         }
 
-        private void UpdateInventoryQuantities(IEnumerable<InventoryItemDto> items)
-        {
-            using var connection = SqliteDb.CreateConnection();
-            connection.Open();
-
-            using var transaction = connection.BeginTransaction();
-
-            try
-            {
-                foreach (var item in items)
-                {
-                    using var updateCmd = connection.CreateCommand();
-                    updateCmd.Transaction = transaction;
-                    updateCmd.CommandText = @"
-                        UPDATE InventoryItems 
-                        SET Quantity = @Quantity
-                        WHERE Id = @Id";
-                    
-                    updateCmd.Parameters.AddWithValue("@Id", item.InventoryItemId.ToString());
-                    updateCmd.Parameters.AddWithValue("@Quantity", item.Quantity);
-                    
-                    updateCmd.ExecuteNonQuery();
-                }
-
-                transaction.Commit();
-                Console.WriteLine($"Updated quantities for {items.Count()} inventory items");
-            }
-            catch (Exception ex)
-            {
-                transaction.Rollback();
-                Console.WriteLine($"Error updating inventory quantities: {ex.Message}");
-                throw;
-            }
-        }
+       
     }
 }

@@ -43,13 +43,14 @@ public class ShiftEventHandler : IEventHandler
         if (payload == null)
             throw new InvalidOperationException("Failed to deserialize shift started payload. Payload is null or invalid.");
 
-        if (!payload.LocationId.HasValue)
+        // LocationId comes from EventDto
+        if (@event.LocationId == Guid.Empty || @event.LocationId == null)
         {
-            _logger.LogWarning("Shift {ShiftId} started without LocationId, using default location", payload.ShiftId);
-            // For now, skip creating the shift if no LocationId is provided
-            // TODO: Handle default location or require LocationId configuration on POS
+            _logger.LogWarning("Shift {ShiftId} started without LocationId in event", payload.ShiftId);
             return;
         }
+
+        var locationId = @event.LocationId.Value;
 
         // Check if shift already exists
         var existingShift = await _shiftRepository.GetByIdAsync(payload.ShiftId);
@@ -62,11 +63,11 @@ public class ShiftEventHandler : IEventHandler
         var shift = new Shift
         {
             Id = payload.ShiftId,
-            LocationId = payload.LocationId.Value,
+            LocationId = locationId,
             OpenedAt = payload.StartDateTime,
             OpeningCash = payload.OpeningCash,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now
         };
 
         await _shiftRepository.AddAsync(shift);
@@ -88,7 +89,7 @@ public class ShiftEventHandler : IEventHandler
 
         shift.ClosedAt = payload.EndDateTime;
         shift.ClosingCash = payload.DeclaredCash;
-        shift.UpdatedAt = DateTime.UtcNow;
+        shift.UpdatedAt = DateTime.Now;
 
         await _shiftRepository.UpdateAsync(shift);
         _logger.LogInformation("Shift ended: {ShiftId}", shift.Id);
@@ -97,7 +98,6 @@ public class ShiftEventHandler : IEventHandler
     private class ShiftStartedPayload
     {
         public Guid ShiftId { get; set; }
-        public Guid? LocationId { get; set; }
         public DateTime StartDateTime { get; set; }
         public decimal OpeningCash { get; set; }
     }

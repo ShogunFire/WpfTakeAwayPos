@@ -8,6 +8,7 @@ public class ProcessedEvent
     public Guid Id { get; set; }
     public string EventType { get; set; } = string.Empty;
     public string? DeviceId { get; set; }
+    public Guid? LocationId { get; set; }
     public string Status { get; set; } = "Received";
     public string? Payload { get; set; }
     public string? ErrorMessage { get; set; }

@@ -33,6 +33,7 @@ namespace RestaurantPOS.Data
             CreateTables(connection);
             EnsureCashTransactionGuidColumn(connection);
             EnsureShiftGuidColumn(connection);
+            EnsureSyncEventsLocationIdColumn(connection);
             SeedIfEmpty(connection);
         }
 
@@ -82,6 +83,31 @@ namespace RestaurantPOS.Data
             {
                 using var alterCmd = connection.CreateCommand();
                 alterCmd.CommandText = "ALTER TABLE CashTransactions ADD COLUMN TransactionGuid TEXT;";
+                alterCmd.ExecuteNonQuery();
+            }
+        }
+
+        private static void EnsureSyncEventsLocationIdColumn(SqliteConnection connection)
+        {
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "PRAGMA table_info(SyncEvents);";
+
+            using var reader = cmd.ExecuteReader();
+            var hasColumn = false;
+            while (reader.Read())
+            {
+                var columnName = reader.GetString(1);
+                if (string.Equals(columnName, "LocationId", StringComparison.OrdinalIgnoreCase))
+                {
+                    hasColumn = true;
+                    break;
+                }
+            }
+
+            if (!hasColumn)
+            {
+                using var alterCmd = connection.CreateCommand();
+                alterCmd.CommandText = "ALTER TABLE SyncEvents ADD COLUMN LocationId TEXT;";
                 alterCmd.ExecuteNonQuery();
             }
         }

@@ -66,7 +66,7 @@ public class LocationInventoryRepository : ILocationInventoryRepository
             LocationId = locationId,
             InventoryItemId = inventoryItemId,
             Quantity = quantity,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.Now
         });
     }
 }

@@ -14,8 +14,8 @@ public class Expense
     public Guid? InventoryCostRecordId { get; set; }
     public Guid? CashTransactionId { get; set; }
     
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime UpdatedAt { get; set; } = DateTime.Now;
     
     // Navigation properties
     public ExpenseCategory? ExpenseCategory { get; set; }

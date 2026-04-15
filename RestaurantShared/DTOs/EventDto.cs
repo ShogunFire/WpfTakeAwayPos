@@ -22,4 +22,7 @@ public class EventDto
 
     [JsonPropertyName("deviceId")]
     public string? DeviceId { get; set; }
+
+    [JsonPropertyName("locationId")]
+    public Guid? LocationId { get; set; }
 }

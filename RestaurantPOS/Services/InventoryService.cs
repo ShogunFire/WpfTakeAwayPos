@@ -43,10 +43,10 @@ namespace RestaurantPOS.Services
             InventoryItems.Add(item);
             _syncEventService.CreateEvent(EventTypes.InventoryItemAdded, new
             {
-                item.InventoryItemId,
-                item.Name,
-                item.Quantity,
-                item.Unit
+                InventoryItemId = item.InventoryItemId,
+                Name = item.Name,
+                Quantity = quantity,
+                Unit = item.Unit
             });
             return item;
         }
@@ -76,7 +76,6 @@ namespace RestaurantPOS.Services
                 UpdateQuantity(item);
                 _syncEventService.CreateEvent(EventTypes.InventoryItemRemoved, new
                 {
-                    LocationId = _settings.LocationId,
                     InventoryItemId = item.InventoryItemId,
                     Quantity = quantity,
                     Reason = reason
@@ -88,7 +87,6 @@ namespace RestaurantPOS.Services
             UpdateQuantity(item);
             _syncEventService.CreateEvent(EventTypes.InventoryItemRemoved, new
             {
-                LocationId = _settings.LocationId,
                 InventoryItemId = item.InventoryItemId,
                 Quantity = quantity,
                 Reason = reason
@@ -109,7 +107,6 @@ namespace RestaurantPOS.Services
             UpdateQuantity(item);
             _syncEventService.CreateEvent(EventTypes.InventoryItemAdded, new
             {
-                LocationId = _settings.LocationId,
                 ShiftId = (object)null,
                 InventoryItemId = item.InventoryItemId,
                 Name = item.Name,

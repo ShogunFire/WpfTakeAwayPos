@@ -53,19 +53,11 @@ public class OrderEventHandler : IEventHandler
         if (payload == null)
             throw new InvalidOperationException("Failed to deserialize order completed payload. Payload is null or invalid.");
 
-        // Get location from shift, or use a default if no shift
-        Guid locationId = Guid.Empty;
-        if (payload.ShiftId.HasValue)
-        {
-            var shift = await _shiftRepository.GetByIdAsync(payload.ShiftId.Value);
-            if (shift != null)
-            {
-                locationId = shift.LocationId;
-            }
-        }
+        // LocationId comes from EventDto
+        if (@event.LocationId == Guid.Empty || @event.LocationId == null)
+            throw new InvalidOperationException("Order event missing LocationId. Cannot process order without a valid location.");
 
-        if (locationId == Guid.Empty)
-            throw new InvalidOperationException("Unable to determine LocationId from Shift for order");
+        var locationId = @event.LocationId.Value;
 
         // Calculate total COGS from order lines
         decimal totalCOGS = 0;
@@ -118,8 +110,8 @@ public class OrderEventHandler : IEventHandler
             TotalCOGS = totalCOGS,
             GrossProfit = grossProfit,
             ProfitMargin = profitMargin,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now
         };
 
         await _orderRepository.AddAsync(order);

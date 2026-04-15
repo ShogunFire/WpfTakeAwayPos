@@ -77,7 +77,6 @@ namespace RestaurantPOS.Services
             {
                 OrderId = order.OrderGuid,
                 ShiftId = activeShift?.ShiftGuid,
-                LocationId = _settings.LocationId == Guid.Empty ? (Guid?)null : _settings.LocationId,
                 Subtotal = order.Subtotal,
                 Tax = order.Tax,
                 TotalAmount = order.TotalAmount,

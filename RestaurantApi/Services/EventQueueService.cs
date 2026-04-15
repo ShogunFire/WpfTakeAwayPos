@@ -90,7 +90,8 @@ public class EventQueueService : BackgroundService
                     Type = processedEvent.EventType,
                     DeviceId = processedEvent.DeviceId,
                     Payload = payload,
-                    CreatedAt = processedEvent.ReceivedAt
+                    CreatedAt = processedEvent.ReceivedAt,
+                    LocationId = processedEvent.LocationId
                 };
 
                 // Find handler
@@ -102,7 +103,7 @@ public class EventQueueService : BackgroundService
                         processedEvent.Id, 
                         "Failed", 
                         $"No handler found for event type: {eventDto.Type}", 
-                        DateTime.UtcNow);
+                        DateTime.Now);
                     continue;
                 }
 
@@ -119,7 +120,7 @@ public class EventQueueService : BackgroundService
                         processedEvent.Id,
                         "Processed",
                         null,
-                        DateTime.UtcNow);
+                        DateTime.Now);
 
                     _logger.LogInformation("Event processed successfully: {EventId} ({EventType})", eventDto.Id, eventDto.Type);
                 }
@@ -141,7 +142,7 @@ public class EventQueueService : BackgroundService
                             processedEvent.Id,
                             "Failed",
                             $"Max retries exceeded ({MaxRetries}). Last error: {errorMessage}",
-                            DateTime.UtcNow);
+                            DateTime.Now);
                     }
                     else
                     {
@@ -157,7 +158,7 @@ public class EventQueueService : BackgroundService
                             processedEvent.Id,
                             "Queued",
                             errorMessage,
-                            DateTime.UtcNow,
+                            DateTime.Now,
                             attemptCount);
                     }
                 }

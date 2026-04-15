@@ -72,7 +72,7 @@ public class ExpenseRepository : IExpenseRepository
     public async Task<bool> UpdateAsync(Expense expense)
     {
         using IDbConnection connection = new SqlConnection(_connectionString);
-        expense.UpdatedAt = DateTime.UtcNow;
+        expense.UpdatedAt = DateTime.Now;
         var sql = @"
             UPDATE Expenses 
             SET ExpenseCategoryId = @ExpenseCategoryId,
@@ -97,7 +97,7 @@ public class ExpenseRepository : IExpenseRepository
             SET CashTransactionId = @CashTransactionId,
                 UpdatedAt = @UpdatedAt
             WHERE Id = @ExpenseId";
-        var rowsAffected = await connection.ExecuteAsync(sql, new { ExpenseId = expenseId, CashTransactionId = cashTransactionId, UpdatedAt = DateTime.UtcNow });
+        var rowsAffected = await connection.ExecuteAsync(sql, new { ExpenseId = expenseId, CashTransactionId = cashTransactionId, UpdatedAt = DateTime.Now });
         return rowsAffected > 0;
     }
 }

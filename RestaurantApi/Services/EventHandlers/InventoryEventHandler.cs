@@ -60,8 +60,11 @@ public class InventoryEventHandler : IEventHandler
         if (payload == null)
             throw new InvalidOperationException("Failed to deserialize inventory item payload. Payload is null or invalid.");
 
-        if (payload.LocationId == null || payload.LocationId == Guid.Empty)
-            throw new InvalidOperationException("LocationId is required for inventory updates.");
+        // LocationId comes from EventDto
+        if (@event.LocationId == Guid.Empty || @event.LocationId == null)
+            throw new InvalidOperationException("InventoryItemAdded event missing LocationId. Cannot process inventory without a valid location.");
+
+        var locationId = @event.LocationId.Value;
 
         if (payload.InventoryItemId == null || payload.InventoryItemId == Guid.Empty)
             throw new InvalidOperationException("InventoryItemId is required for inventory updates.");
@@ -81,16 +84,16 @@ public class InventoryEventHandler : IEventHandler
                 Id = payload.InventoryItemId.Value,
                 Name = payload.Name.Trim(),
                 Unit = payload.Unit.Trim(),
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
             };
 
             await _inventoryRepository.AddAsync(item);
         }
 
-        var currentQuantity = await _locationInventoryRepository.GetQuantityAsync(payload.LocationId.Value, item.Id);
+        var currentQuantity = await _locationInventoryRepository.GetQuantityAsync(locationId, item.Id);
         var newQuantity = currentQuantity + payload.Quantity;
-        await _locationInventoryRepository.UpsertQuantityAsync(payload.LocationId.Value, item.Id, newQuantity);
+        await _locationInventoryRepository.UpsertQuantityAsync(locationId, item.Id, newQuantity);
 
         if (payload.TotalCost.HasValue && payload.TotalCost.Value > 0)
         {
@@ -99,7 +102,7 @@ public class InventoryEventHandler : IEventHandler
                 Id = Guid.NewGuid(),
                 EventId = @event.Id,
                 ShiftId = payload.ShiftId,
-                LocationId = payload.LocationId.Value,
+                LocationId = locationId,
                 InventoryItemId = item.Id,
                 QuantityReceived = payload.Quantity,
                 TotalCost = payload.TotalCost.Value,
@@ -126,11 +129,11 @@ public class InventoryEventHandler : IEventHandler
                             Amount = payload.TotalCost.Value,
                             Description = $"Inventory: {item.Name}",
                             ExpenseDate = @event.CreatedAt,
-                            LocationId = payload.LocationId.Value,
+                            LocationId = locationId,
                             ShiftId = payload.ShiftId,
                             InventoryCostRecordId = costRecord.Id,
-                            CreatedAt = DateTime.UtcNow,
-                            UpdatedAt = DateTime.UtcNow
+                            CreatedAt = DateTime.Now,
+                            UpdatedAt = DateTime.Now
                         };
                         await _expenseRepository.AddAsync(expense);
 
@@ -150,8 +153,8 @@ public class InventoryEventHandler : IEventHandler
             {
                 decimal unitCost = payload.TotalCost.Value / payload.Quantity;
                 item.CurrentUnitCost = unitCost;
-                item.LastCostUpdate = DateTime.UtcNow;
-                item.UpdatedAt = DateTime.UtcNow;
+                item.LastCostUpdate = DateTime.Now;
+                item.UpdatedAt = DateTime.Now;
 
                 await _inventoryRepository.UpdateAsync(item);
 
@@ -176,7 +179,7 @@ public class InventoryEventHandler : IEventHandler
             item.Name,
             payload.Quantity,
             item.Unit,
-            payload.LocationId);
+            locationId);
     }
 
     private async Task HandleInventoryItemRemoved(EventDto @event)
@@ -185,8 +188,11 @@ public class InventoryEventHandler : IEventHandler
         if (payload == null)
             throw new InvalidOperationException("Failed to deserialize inventory item remove payload. Payload is null or invalid.");
 
-        if (payload.LocationId == null || payload.LocationId == Guid.Empty)
-            throw new InvalidOperationException("LocationId is required for inventory updates.");
+        // LocationId comes from EventDto
+        if (@event.LocationId == Guid.Empty || @event.LocationId == null)
+            throw new InvalidOperationException("InventoryItemRemoved event missing LocationId. Cannot process inventory without a valid location.");
+
+        var locationId = @event.LocationId.Value;
 
         if (payload.InventoryItemId == null || payload.InventoryItemId == Guid.Empty)
             throw new InvalidOperationException("InventoryItemId is required for inventory updates.");
@@ -201,25 +207,24 @@ public class InventoryEventHandler : IEventHandler
             throw new InvalidOperationException($"Inventory item not found: {payload.InventoryItemId}. Cannot remove inventory.");
         }
 
-        var currentQuantity = await _locationInventoryRepository.GetQuantityAsync(payload.LocationId.Value, item.Id);
+        var currentQuantity = await _locationInventoryRepository.GetQuantityAsync(locationId, item.Id);
         var newQuantity = currentQuantity - payload.Quantity;
         if (newQuantity < 0)
             newQuantity = 0;
 
-        await _locationInventoryRepository.UpsertQuantityAsync(payload.LocationId.Value, item.Id, newQuantity);
+        await _locationInventoryRepository.UpsertQuantityAsync(locationId, item.Id, newQuantity);
 
         _logger.LogInformation(
             "Inventory item removed: {ItemName} ({Quantity} {Unit}) at location {LocationId} Reason: {Reason}",
             item.Name,
             payload.Quantity,
             item.Unit,
-            payload.LocationId,
+            locationId,
             payload.Reason ?? "N/A");
     }
 
     private class InventoryItemPayload
     {
-        public Guid? LocationId { get; set; }
         public Guid? InventoryItemId { get; set; }
         public Guid? ShiftId { get; set; }
         public string? Name { get; set; }

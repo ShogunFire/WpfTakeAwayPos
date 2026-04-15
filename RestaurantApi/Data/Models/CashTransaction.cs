@@ -4,6 +4,7 @@ public class CashTransaction
 {
     public Guid Id { get; set; }
     public Guid? ShiftId { get; set; }
+    public Guid LocationId { get; set; }
     public string TransactionType { get; set; } = string.Empty;
     public decimal Amount { get; set; }
     public string? Reason { get; set; }

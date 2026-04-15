@@ -1,4 +1,5 @@
 @page "/menu-performance"
+@using RestaurantDashboard.Data.Models
 @using RestaurantDashboard.Data.Services
 @inject AnalyticsService Analytics
 @rendermode InteractiveServer
@@ -105,8 +106,8 @@
                                 if (points.Any())
                                 {
                                     var maxValue = Math.Max(
-                                        Math.Max(points.Max(p => p.TotalRevenue), points.Max(p => p.TotalCost)),
-                                        points.Max(p => p.TotalProfit)
+                                        Math.Max(points.Max(p => p.Price), points.Max(p => p.Cost)),
+                                        points.Max(p => p.Profit)
                                     );
                                     var padding = 60;
                                     var chartWidth = 1200 - (padding * 2);
@@ -123,32 +124,32 @@
                                     </g>
 
                                     <polyline class="line revenue" points="@string.Join(" ", points.Select((p, i) =>
-                                        $"{padding + (i * pointSpacing)},{padding + chartHeight - (p.TotalRevenue * yScale)}"))"/>
+                                        $"{padding + (i * pointSpacing)},{padding + chartHeight - (p.Price * yScale)}"))"/>
 
                                     <polyline class="line cost" points="@string.Join(" ", points.Select((p, i) =>
-                                        $"{padding + (i * pointSpacing)},{padding + chartHeight - (p.TotalCost * yScale)}"))"/>
+                                        $"{padding + (i * pointSpacing)},{padding + chartHeight - (p.Cost * yScale)}"))"/>
 
                                     <polyline class="line profit" points="@string.Join(" ", points.Select((p, i) =>
-                                        $"{padding + (i * pointSpacing)},{padding + chartHeight - (p.TotalProfit * yScale)}"))"/>
+                                        $"{padding + (i * pointSpacing)},{padding + chartHeight - (p.Profit * yScale)}"))"/>
 
                                     @foreach (var (p, i) in points.Select((p, i) => (p, i)))
                                     {
                                         var x = padding + (i * pointSpacing);
-                                        var y = padding + chartHeight - (p.TotalRevenue * yScale);
+                                        var y = padding + chartHeight - (p.Price * yScale);
                                         <circle class="point revenue" cx="@x" cy="@y" r="4"/>
                                     }
 
                                     @foreach (var (p, i) in points.Select((p, i) => (p, i)))
                                     {
                                         var x = padding + (i * pointSpacing);
-                                        var y = padding + chartHeight - (p.TotalCost * yScale);
+                                        var y = padding + chartHeight - (p.Cost * yScale);
                                         <circle class="point cost" cx="@x" cy="@y" r="4"/>
                                     }
 
                                     @foreach (var (p, i) in points.Select((p, i) => (p, i)))
                                     {
                                         var x = padding + (i * pointSpacing);
-                                        var y = padding + chartHeight - (p.TotalProfit * yScale);
+                                        var y = padding + chartHeight - (p.Profit * yScale);
                                         <circle class="point profit" cx="@x" cy="@y" r="4"/>
                                     }
 
@@ -169,7 +170,7 @@
                     <div class="legend">
                         <div class="legend-item">
                             <span class="legend-color revenue"></span>
-                            <span>Revenue</span>
+                            <span>Price</span>
                         </div>
                         <div class="legend-item">
                             <span class="legend-color cost"></span>

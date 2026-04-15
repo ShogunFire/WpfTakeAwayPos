@@ -82,8 +82,8 @@ public class MenuItemCostService : IMenuItemCostService
         if (Math.Abs(menuItem.CurrentCOGS - newCOGS) > 0.0001m)
         {
             menuItem.CurrentCOGS = newCOGS;
-            menuItem.LastCOGSUpdate = DateTime.UtcNow;
-            menuItem.UpdatedAt = DateTime.UtcNow;
+            menuItem.LastCOGSUpdate = DateTime.Now;
+            menuItem.UpdatedAt = DateTime.Now;
 
             await _menuItemRepository.UpdateAsync(menuItem);
 
@@ -155,8 +155,8 @@ public class MenuItemCostService : IMenuItemCostService
             UnitCost = menuItem.CurrentCOGS,
             GrossProfit = grossProfit,
             GrossMargin = grossMargin,
-            SnapshotDate = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow
+            SnapshotDate = DateTime.Now,
+            CreatedAt = DateTime.Now
         };
 
         await _historyRepository.AddAsync(history);

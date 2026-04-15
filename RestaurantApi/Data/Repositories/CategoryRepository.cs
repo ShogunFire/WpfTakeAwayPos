@@ -59,8 +59,8 @@ public class CategoryRepository : ICategoryRepository
             throw new ArgumentNullException(nameof(category));
 
         category.Id = Guid.NewGuid();
-        category.CreatedAt = DateTime.UtcNow;
-        category.UpdatedAt = DateTime.UtcNow;
+        category.CreatedAt = DateTime.Now;
+        category.UpdatedAt = DateTime.Now;
 
         using (var connection = new SqlConnection(_connectionString))
         {
@@ -79,7 +79,7 @@ public class CategoryRepository : ICategoryRepository
         if (category == null)
             throw new ArgumentNullException(nameof(category));
 
-        category.UpdatedAt = DateTime.UtcNow;
+        category.UpdatedAt = DateTime.Now;
 
         using (var connection = new SqlConnection(_connectionString))
         {

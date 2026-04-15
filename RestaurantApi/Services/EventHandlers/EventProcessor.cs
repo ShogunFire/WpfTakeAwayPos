@@ -56,10 +56,11 @@ public class EventProcessor : IEventProcessor
                 Id = @event.Id,
                 EventType = @event.Type,
                 DeviceId = @event.DeviceId,
+                LocationId = @event.LocationId,
                 Payload = payloadJson,
                 Status = "Queued",
                 ErrorMessage = null,
-                ReceivedAt = DateTime.UtcNow,
+                ReceivedAt = DateTime.Now,
                 LastAttemptAt = null,
                 AttemptCount = 0,
                 ProcessedAt = null

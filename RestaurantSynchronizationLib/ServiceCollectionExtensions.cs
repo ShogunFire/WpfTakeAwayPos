@@ -26,9 +26,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(config);
 
         // Register repositories
-        services.AddSingleton(sp => new SyncEventRepository(
+        services.AddSingleton<ISyncEventRepository>(sp => new SyncEventRepository(
             config.DatabaseConnectionString,
-            sp.GetRequiredService<ILogger<SyncEventRepository>>()));
+            sp.GetRequiredService<ILogger<SyncEventRepository>>(),
+            config.DeviceId));
 
         // Register ApiEventClient
         services.AddSingleton(sp => new ApiEventClient(

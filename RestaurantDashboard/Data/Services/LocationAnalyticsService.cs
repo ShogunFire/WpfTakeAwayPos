@@ -26,16 +26,16 @@ public class LocationAnalyticsService : ILocationAnalyticsService
 
         var sql = @"
             SELECT 
-                l.Id as LocationId,
+                o.LocationId,
                 l.Name as LocationName,
                 COUNT(DISTINCT o.Id) as TotalOrders,
                 COALESCE(SUM(o.TotalAmount), 0) as TotalRevenue,
                 COALESCE(AVG(o.TotalAmount), 0) as AverageOrderValue
-            FROM Locations l
-            LEFT JOIN Shifts s ON l.Id = s.LocationId
-            LEFT JOIN Orders o ON s.Id = o.ShiftId AND o.CreatedAt BETWEEN @StartDate AND @EndDate
-            WHERE l.IsActive = 1
-            GROUP BY l.Id, l.Name
+            FROM Orders o
+            JOIN Locations l ON o.LocationId = l.Id
+            WHERE o.CreatedAt BETWEEN @StartDate AND @EndDate
+              AND l.IsActive = 1
+            GROUP BY o.LocationId, l.Name
             ORDER BY TotalRevenue DESC";
 
         var results = await connection.QueryAsync<LocationPerformance>(sql, new { StartDate = startDate, EndDate = endDate });

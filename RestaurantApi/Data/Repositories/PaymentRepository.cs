@@ -50,8 +50,8 @@ public class PaymentRepository : IPaymentRepository
         var sql = @"
             IF NOT EXISTS (SELECT 1 FROM Payments WHERE Id = @Id)
             BEGIN
-                INSERT INTO Payments (Id, OrderId, Amount, PaymentMethod, CreatedAt, UpdatedAt)
-                VALUES (@Id, @OrderId, @Amount, @PaymentMethod, @CreatedAt, @UpdatedAt);
+                INSERT INTO Payments (Id, LocationId, OrderId, Amount, PaymentMethod, CreatedAt, UpdatedAt)
+                VALUES (@Id, @LocationId, @OrderId, @Amount, @PaymentMethod, @CreatedAt, @UpdatedAt);
             END";
         await connection.ExecuteAsync(sql, payment);
     }

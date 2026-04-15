@@ -61,7 +61,6 @@ namespace RestaurantPOS.Services
             _syncEventService.CreateEvent(EventTypes.ShiftStarted, new
             {
                 ShiftId = shift.ShiftGuid,
-                LocationId = _settings.LocationId == Guid.Empty ? (Guid?)null : _settings.LocationId,
                 StartDateTime = shift.StartDateTime,
                 OpeningCash = shift.OpeningCash
             });
@@ -106,7 +105,6 @@ namespace RestaurantPOS.Services
             _syncEventService.CreateEvent(EventTypes.ShiftEnded, new
             {
                 ShiftId = _activeShift.ShiftGuid,
-                LocationId = _settings.LocationId == Guid.Empty ? (Guid?)null : _settings.LocationId,
                 EndDateTime = _activeShift.EndDateTime,
                 DeclaredCash = _activeShift.DeclaredCash,
                 ExpectedCash = _activeShift.ExpectedCash,

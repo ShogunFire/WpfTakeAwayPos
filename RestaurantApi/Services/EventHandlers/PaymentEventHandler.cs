@@ -46,6 +46,11 @@ public class PaymentEventHandler : IEventHandler
             throw new InvalidOperationException($"Payment payload missing OrderId for PaymentId {payload.PaymentId}. Cannot process payment without a valid order.");
         }
 
+        if (@event.LocationId == Guid.Empty || @event.LocationId == null)
+        {
+            throw new InvalidOperationException("Payment event missing LocationId. Cannot process payment without a valid location.");
+        }
+
         var order = await _orderRepository.GetByIdAsync(payload.OrderId);
         if (order == null)
         {
@@ -56,10 +61,11 @@ public class PaymentEventHandler : IEventHandler
         {
             Id = payload.PaymentId ?? Guid.NewGuid(),
             OrderId = order.Id,
+            LocationId = @event.LocationId.Value,
             Amount = payload.Amount,
             PaymentMethod = payload.PaymentMethod ?? "Unknown",
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now
         };
 
         await _paymentRepository.AddAsync(payment);

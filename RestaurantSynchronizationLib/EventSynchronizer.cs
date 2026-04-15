@@ -17,13 +17,13 @@ namespace RestaurantSynchronizationLib;
 public class EventSynchronizer
 {
     private readonly SyncConfiguration _config;
-    private readonly SyncEventRepository _eventRepository;
+    private readonly ISyncEventRepository _eventRepository;
     private readonly ApiEventClient _apiClient;
     private readonly ILogger<EventSynchronizer> _logger;
 
     public EventSynchronizer(
         SyncConfiguration config,
-        SyncEventRepository eventRepository,
+        ISyncEventRepository eventRepository,
         ApiEventClient apiClient,
         ILogger<EventSynchronizer> logger)
     {
@@ -54,10 +54,10 @@ public class EventSynchronizer
                 return result;
             }
 
-            // Get unsynced events from database
-            var unsyncedEvents = await _eventRepository.GetUnsyncedEventsAsync();
+            // Get unsynced events from database (already as EventDtos)
+            var eventDtos = await _eventRepository.GetUnsyncedEventsAsync();
 
-            if (!unsyncedEvents.Any())
+            if (!eventDtos.Any())
             {
                 _logger.LogInformation("No unsynced events to synchronize");
                 result.Success = true;
@@ -65,17 +65,17 @@ public class EventSynchronizer
                 return result;
             }
 
-            result.TotalEvents = unsyncedEvents.Count;
-            _logger.LogInformation("Found {Count} events to synchronize", unsyncedEvents.Count);
+            result.TotalEvents = eventDtos.Count;
+            _logger.LogInformation("Found {Count} events to synchronize", eventDtos.Count);
 
-            // Convert to DTOs and send
+            // Send events
             if (_config.UseBatchEndpoint)
             {
-                await SynchronizeUsingBatchAsync(unsyncedEvents, result);
+                await SynchronizeUsingBatchAsync(eventDtos, result);
             }
             else
             {
-                await SynchronizeOneByOneAsync(unsyncedEvents, result);
+                await SynchronizeOneByOneAsync(eventDtos, result);
             }
 
             result.Success = result.SyncedCount > 0;
@@ -96,9 +96,8 @@ public class EventSynchronizer
     /// <summary>
     /// Synchronize events using the batch endpoint
     /// </summary>
-    private async Task SynchronizeUsingBatchAsync(List<SyncEventRecord> unsyncedEvents, SyncResult result)
+    private async Task SynchronizeUsingBatchAsync(List<EventDto> eventDtos, SyncResult result)
     {
-        var eventDtos = ConvertToEventDtos(unsyncedEvents);
         var successfulEventIds = new List<Guid>();
 
         // Process in batches
@@ -160,10 +159,8 @@ public class EventSynchronizer
     /// <summary>
     /// Synchronize events one by one
     /// </summary>
-    private async Task SynchronizeOneByOneAsync(List<SyncEventRecord> unsyncedEvents, SyncResult result)
+    private async Task SynchronizeOneByOneAsync(List<EventDto> eventDtos, SyncResult result)
     {
-        var eventDtos = ConvertToEventDtos(unsyncedEvents);
-
         foreach (var eventDto in eventDtos)
         {
             var (success, alreadyProcessed) = await _apiClient.SendEventAsync(eventDto);
@@ -185,49 +182,7 @@ public class EventSynchronizer
         }
     }
 
-    /// <summary>
-    /// Convert SyncEventRecord to EventDto
-    /// </summary>
-    private List<EventDto> ConvertToEventDtos(List<SyncEventRecord> events)
-    {
-        var dtos = new List<EventDto>();
 
-        foreach (var @event in events)
-        {
-            try
-            {
-                // Parse payload if it's JSON
-                object? payload = null;
-                if (!string.IsNullOrEmpty(@event.Payload))
-                {
-                    try
-                    {
-                        payload = JsonSerializer.Deserialize<object>(@event.Payload);
-                    }
-                    catch
-                    {
-                        // If it fails to parse as JSON, keep it as string
-                        payload = @event.Payload;
-                    }
-                }
-
-                dtos.Add(new EventDto
-                {
-                    Id = @event.Id,
-                    Type = @event.Type,
-                    Payload = payload,
-                    CreatedAt = @event.CreatedAt,
-                    DeviceId = @event.DeviceId ?? _config.DeviceId
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error converting event {EventId} to DTO", @event.Id);
-            }
-        }
-
-        return dtos;
-    }
 
     /// <summary>
     /// Get synchronization statistics

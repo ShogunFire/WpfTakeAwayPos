@@ -40,17 +40,23 @@ public class CashTransactionEventHandler : IEventHandler
         if (payload == null)
             throw new InvalidOperationException("Failed to deserialize cash transaction payload. Payload is null or invalid.");
 
+        if (@event.LocationId == Guid.Empty || @event.LocationId == null)
+        {
+            throw new InvalidOperationException("Cash transaction event missing LocationId. Cannot process transaction without a valid location.");
+        }
+
         var transaction = new CashTransaction
         {
             Id = payload.TransactionGuid ?? Guid.NewGuid(),
             ShiftId = payload.ShiftId,
+            LocationId = @event.LocationId.Value,
             TransactionType = payload.Type ?? "Unknown",
             Amount = payload.Amount,
             Reason = payload.Reason,
             Description = payload.Description,
-            OccurredAt = payload.Timestamp == default ? DateTime.UtcNow : payload.Timestamp,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            OccurredAt = payload.Timestamp == default ? DateTime.Now : payload.Timestamp,
+            CreatedAt = DateTime.Now,
+            UpdatedAt = DateTime.Now
         };
 
         await _cashTransactionRepository.AddAsync(transaction);
@@ -94,12 +100,12 @@ public class CashTransactionEventHandler : IEventHandler
                         Description = string.IsNullOrWhiteSpace(payload.Description) 
                             ? payload.Reason ?? "Cash expense" 
                             : payload.Description,
-                        ExpenseDate = payload.Timestamp == default ? DateTime.UtcNow : payload.Timestamp,
-                        LocationId = payload.LocationId ?? Guid.Empty,
+                        ExpenseDate = payload.Timestamp == default ? DateTime.Now : payload.Timestamp,
+                        LocationId = @event.LocationId ?? Guid.Empty,
                         ShiftId = payload.ShiftId,
                         CashTransactionId = transaction.Id,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now
                     };
                     await _expenseRepository.AddAsync(newExpense);
 
@@ -144,7 +150,6 @@ public class CashTransactionEventHandler : IEventHandler
         public DateTime Timestamp { get; set; }
         public bool IsExpense { get; set; }
         public Guid? RelatedInventoryCostRecordId { get; set; }
-        public Guid? LocationId { get; set; }
     }
 
     private static T? DeserializePayload<T>(object? payload) where T : class

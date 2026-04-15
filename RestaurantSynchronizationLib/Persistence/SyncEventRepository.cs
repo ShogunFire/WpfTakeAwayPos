@@ -5,29 +5,45 @@ using System.Data;
 using System.Data.SQLite;
 using System.Linq;
 using System.Threading.Tasks;
+using RestaurantShared.DTOs;
 
 namespace RestaurantSynchronizationLib.Persistence;
 
 /// <summary>
+/// Interface for accessing SyncEvent records from database
+/// </summary>
+public interface ISyncEventRepository
+{
+    Task<List<EventDto>> GetUnsyncedEventsAsync();
+    Task<List<EventDto>> GetUnsyncedEventsByTypeAsync(string eventType);
+    Task MarkAsSyncedAsync(Guid eventId);
+    Task MarkAsSyncedAsync(IEnumerable<Guid> eventIds);
+    Task DeleteEventAsync(Guid eventId);
+    Task<int> GetUnsyncedEventCountAsync();
+}
+
+/// <summary>
 /// Accesses SyncEvent records from SQLite database
 /// </summary>
-public class SyncEventRepository
+public class SyncEventRepository : ISyncEventRepository
 {
     private readonly string _connectionString;
     private readonly ILogger<SyncEventRepository> _logger;
+    private readonly string _deviceId;
 
-    public SyncEventRepository(string connectionString, ILogger<SyncEventRepository> logger)
+    public SyncEventRepository(string connectionString, ILogger<SyncEventRepository> logger, string deviceId = "")
     {
         _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _deviceId = deviceId ?? string.Empty;
     }
 
     /// <summary>
-    /// Get all unsynced events
+    /// Get all unsynced events as EventDtos
     /// </summary>
-    public async Task<List<SyncEventRecord>> GetUnsyncedEventsAsync()
+    public async Task<List<EventDto>> GetUnsyncedEventsAsync()
     {
-        var events = new List<SyncEventRecord>();
+        var events = new List<EventDto>();
 
         try
         {
@@ -37,7 +53,7 @@ public class SyncEventRepository
 
                 var cmd = connection.CreateCommand();
                 cmd.CommandText = @"
-                    SELECT Id, Type, Payload, CreatedAt, SyncedAt, DeviceId
+                    SELECT Id, Type, Payload, CreatedAt, DeviceId, LocationId
                     FROM SyncEvents
                     WHERE SyncedAt IS NULL
                     ORDER BY CreatedAt ASC";
@@ -46,14 +62,16 @@ public class SyncEventRepository
                 {
                     while (await reader.ReadAsync())
                     {
-                        events.Add(new SyncEventRecord
+                        var payload = ParsePayload(reader.IsDBNull(2) ? null : reader.GetString(2));
+                        
+                        events.Add(new EventDto
                         {
                             Id = reader.GetGuid(0),
                             Type = reader.GetString(1),
-                            Payload = reader.IsDBNull(2) ? null : reader.GetString(2),
+                            Payload = payload,
                             CreatedAt = reader.GetDateTime(3),
-                            SyncedAt = reader.IsDBNull(4) ? null : (DateTime?)reader.GetDateTime(4),
-                            DeviceId = reader.IsDBNull(5) ? null : reader.GetString(5)
+                            DeviceId = reader.IsDBNull(4) ? _deviceId : reader.GetString(4),
+                            LocationId = reader.IsDBNull(5) ? (Guid?)null : reader.GetGuid(5)
                         });
                     }
                 }
@@ -71,11 +89,11 @@ public class SyncEventRepository
     }
 
     /// <summary>
-    /// Get unsynced events by type
+    /// Get unsynced events by type as EventDtos
     /// </summary>
-    public async Task<List<SyncEventRecord>> GetUnsyncedEventsByTypeAsync(string eventType)
+    public async Task<List<EventDto>> GetUnsyncedEventsByTypeAsync(string eventType)
     {
-        var events = new List<SyncEventRecord>();
+        var events = new List<EventDto>();
 
         try
         {
@@ -85,7 +103,7 @@ public class SyncEventRepository
 
                 var cmd = connection.CreateCommand();
                 cmd.CommandText = @"
-                    SELECT Id, Type, Payload, CreatedAt, SyncedAt, DeviceId
+                    SELECT Id, Type, Payload, CreatedAt, DeviceId, LocationId
                     FROM SyncEvents
                     WHERE SyncedAt IS NULL AND Type = @Type
                     ORDER BY CreatedAt ASC";
@@ -95,14 +113,16 @@ public class SyncEventRepository
                 {
                     while (await reader.ReadAsync())
                     {
-                        events.Add(new SyncEventRecord
+                        var payload = ParsePayload(reader.IsDBNull(2) ? null : reader.GetString(2));
+                        
+                        events.Add(new EventDto
                         {
                             Id = reader.GetGuid(0),
                             Type = reader.GetString(1),
-                            Payload = reader.IsDBNull(2) ? null : reader.GetString(2),
+                            Payload = payload,
                             CreatedAt = reader.GetDateTime(3),
-                            SyncedAt = reader.IsDBNull(4) ? null : (DateTime?)reader.GetDateTime(4),
-                            DeviceId = reader.IsDBNull(5) ? null : reader.GetString(5)
+                            DeviceId = reader.IsDBNull(4) ? _deviceId : reader.GetString(4),
+                            LocationId = reader.IsDBNull(5) ? (Guid?)null : reader.GetGuid(5)
                         });
                     }
                 }
@@ -117,6 +137,25 @@ public class SyncEventRepository
         }
 
         return events;
+    }
+
+    /// <summary>
+    /// Parse JSON payload to object
+    /// </summary>
+    private object? ParsePayload(string? payloadJson)
+    {
+        if (string.IsNullOrEmpty(payloadJson))
+            return null;
+
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<object>(payloadJson);
+        }
+        catch
+        {
+            // If it fails to parse as JSON, keep it as string
+            return payloadJson;
+        }
     }
 
     /// <summary>
@@ -252,12 +291,4 @@ public class SyncEventRepository
 /// <summary>
 /// Represents a SyncEvent record from the database
 /// </summary>
-public class SyncEventRecord
-{
-    public Guid Id { get; set; }
-    public string Type { get; set; } = string.Empty;
-    public string? Payload { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime? SyncedAt { get; set; }
-    public string? DeviceId { get; set; }
-}
+

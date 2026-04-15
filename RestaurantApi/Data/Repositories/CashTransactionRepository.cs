@@ -45,6 +45,7 @@ public class CashTransactionRepository : ICashTransactionRepository
                 INSERT INTO CashTransactions (
                     Id,
                     ShiftId,
+                    LocationId,
                     TransactionType,
                     Amount,
                     Reason,
@@ -56,6 +57,7 @@ public class CashTransactionRepository : ICashTransactionRepository
                 VALUES (
                     @Id,
                     @ShiftId,
+                    @LocationId,
                     @TransactionType,
                     @Amount,
                     @Reason,

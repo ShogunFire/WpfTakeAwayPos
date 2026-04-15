@@ -25,63 +25,33 @@ public class MenuItemAnalyticsService : IMenuItemAnalyticsService
     {
         using var connection = new SqlConnection(_connectionString);
 
-        var locationFilter = locationId.HasValue ? "AND s.LocationId = @LocationId" : "";
-
         var sql = $@"
-            WITH MenuItemComponentCosts AS (
-                SELECT
-                    ol.OrderId,
-                    ol.MenuItemId,
-                    ol.MenuItemName,
-                    ol.Quantity as OrderLineQuantity,
-                    ol.UnitPrice,
-                    ol.LineTotal,
-                    mic.InventoryItemId,
-                    mic.Quantity as ComponentQuantity,
-                    -- Get the most recent delivery cost BEFORE this order
-                    COALESCE(
-                        (SELECT TOP 1 icr.TotalCost / NULLIF(icr.QuantityReceived, 0)
-                         FROM InventoryCostRecords icr
-                         WHERE icr.InventoryItemId = mic.InventoryItemId
-                             AND icr.RecordedAt <= (SELECT o2.CreatedAt FROM Orders o2 WHERE o2.Id = ol.OrderId)
-                         ORDER BY icr.RecordedAt DESC),
-                        0
-                    ) as ComponentUnitCost
-                FROM OrderLines ol
-                JOIN Orders o ON ol.OrderId = o.Id
-                JOIN Shifts s ON o.ShiftId = s.Id
-                LEFT JOIN MenuItemComponents mic ON ol.MenuItemId = mic.MenuItemId
-                WHERE o.CreatedAt >= @StartDate
-                  AND o.CreatedAt < @EndDate
-                  AND (@LocationId IS NULL OR s.LocationId = @LocationId)
-            ),
-            MenuItemCostsPerOrder AS (
-                SELECT
-                    OrderId,
-                    MenuItemId,
-                    MenuItemName,
-                    OrderLineQuantity,
-                    UnitPrice,
-                    LineTotal,
-                    SUM(ComponentQuantity * ComponentUnitCost) as ItemCostPerUnit
-                FROM MenuItemComponentCosts
-                GROUP BY OrderId, MenuItemId, MenuItemName, OrderLineQuantity, UnitPrice, LineTotal
-            )
             SELECT
-                MenuItemId,
-                MenuItemName,
-                SUM(OrderLineQuantity) AS TotalQuantity,
-                SUM(LineTotal) AS TotalRevenue,
-                SUM(UnitPrice * OrderLineQuantity) / NULLIF(SUM(OrderLineQuantity), 0) AS AveragePrice,
-                COALESCE(SUM(ItemCostPerUnit * OrderLineQuantity), 0) AS TotalCost,
-                COALESCE(SUM(ItemCostPerUnit * OrderLineQuantity) / NULLIF(SUM(OrderLineQuantity), 0), 0) AS AverageCost,
+                ol.MenuItemId,
+                ol.MenuItemName,
+                SUM(ol.Quantity) AS TotalQuantity,
+                SUM(ol.LineTotal) AS TotalRevenue,
+                AVG(CAST(ol.UnitPrice AS DECIMAL(18,2))) AS AveragePrice,
+                COALESCE(SUM(hc.UnitCost * ol.Quantity), 0) AS TotalCost,
+                COALESCE(AVG(hc.UnitCost), 0) AS AverageCost,
                 CASE
-                    WHEN SUM(LineTotal) > 0 THEN
-                        ((SUM(LineTotal) - COALESCE(SUM(ItemCostPerUnit * OrderLineQuantity), 0)) / SUM(LineTotal)) * 100
+                    WHEN SUM(ol.LineTotal) > 0 THEN
+                        ((SUM(ol.LineTotal) - COALESCE(SUM(hc.UnitCost * ol.Quantity), 0)) / SUM(ol.LineTotal)) * 100
                     ELSE 0
                 END AS ProfitMargin
-            FROM MenuItemCostsPerOrder
-            GROUP BY MenuItemId, MenuItemName
+            FROM Orders o
+            JOIN OrderLines ol ON o.Id = ol.OrderId
+            OUTER APPLY (
+                SELECT TOP 1 h.UnitCost
+                FROM MenuItemGrossProfitHistory h
+                WHERE h.MenuItemId = ol.MenuItemId
+                  AND h.SnapshotDate <= o.CreatedAt
+                ORDER BY h.SnapshotDate DESC
+            ) hc
+            WHERE o.CreatedAt >= @StartDate
+              AND o.CreatedAt < @EndDate
+              AND (@LocationId IS NULL OR o.LocationId = @LocationId)
+            GROUP BY ol.MenuItemId, ol.MenuItemName
             ORDER BY TotalRevenue DESC;";
 
         var results = await connection.QueryAsync<MenuItemPerformance>(sql, new { StartDate = startDate, EndDate = endDate, LocationId = locationId });
@@ -114,72 +84,28 @@ public class MenuItemAnalyticsService : IMenuItemAnalyticsService
 
         var dateFormat = interval.ToLower() switch
         {
-            "hour" => "CONVERT(VARCHAR, olip.CreatedAt, 120)",
-            "day" => "CONVERT(DATE, olip.CreatedAt)",
-            "week" => "DATEADD(week, DATEDIFF(week, 0, olip.CreatedAt), 0)",
-            "month" => "DATEFROMPARTS(YEAR(olip.CreatedAt), MONTH(olip.CreatedAt), 1)",
-            _ => "CONVERT(DATE, olip.CreatedAt)"
+            "hour" => "CONVERT(VARCHAR, h.SnapshotDate, 120)",
+            "day" => "CONVERT(DATE, h.SnapshotDate)",
+            "week" => "DATEADD(week, DATEDIFF(week, 0, h.SnapshotDate), 0)",
+            "month" => "DATEFROMPARTS(YEAR(h.SnapshotDate), MONTH(h.SnapshotDate), 1)",
+            _ => "CONVERT(DATE, h.SnapshotDate)"
         };
 
         var sql = $@"
-            WITH OrdersInPeriod AS (
-                SELECT
-                    o.Id,
-                    o.CreatedAt,
-                    s.LocationId
-                FROM Orders o
-                JOIN Shifts s ON o.ShiftId = s.Id
-                WHERE o.CreatedAt >= @StartDate
-                  AND o.CreatedAt < @EndDate
-                  AND (@LocationId IS NULL OR s.LocationId = @LocationId)
-            ),
-            OrderLinesInPeriod AS (
-                SELECT
-                    ol.OrderId,
-                    ol.MenuItemId,
-                    ol.Quantity,
-                    ol.UnitPrice,
-                    ol.LineTotal,
-                    o.CreatedAt
-                FROM OrdersInPeriod o
-                JOIN OrderLines ol ON ol.OrderId = o.Id
-                WHERE ol.MenuItemId = @MenuItemId
-            ),
-            LineComponentCosts AS (
-                SELECT
-                    olip.OrderId,
-                    olip.CreatedAt,
-                    olip.LineTotal,
-                    olip.Quantity,
-                    mic.Quantity AS ComponentQuantity,
-                    (SELECT TOP 1 icr.TotalCost / NULLIF(icr.QuantityReceived, 0)
-                     FROM InventoryCostRecords icr
-                     WHERE icr.InventoryItemId = mic.InventoryItemId
-                       AND icr.RecordedAt <= olip.CreatedAt
-                     ORDER BY icr.RecordedAt DESC) AS UnitCost
-                FROM OrderLinesInPeriod olip
-                JOIN MenuItemComponents mic ON mic.MenuItemId = olip.MenuItemId
-            ),
-            LineCosts AS (
-                SELECT
-                    OrderId,
-                    CreatedAt,
-                    LineTotal,
-                    Quantity,
-                    SUM(ComponentQuantity * COALESCE(UnitCost, 0)) AS ItemCostPerUnit
-                FROM LineComponentCosts
-                GROUP BY OrderId, CreatedAt, LineTotal, Quantity
-            )
             SELECT
                 {dateFormat} AS Period,
-                SUM(LineTotal) AS TotalRevenue,
-                SUM(ItemCostPerUnit * Quantity) AS TotalCost,
-                SUM(LineTotal) - SUM(ItemCostPerUnit * Quantity) AS TotalProfit
-            FROM LineCosts olip
+                AVG(h.Price) AS Price,
+                AVG(h.UnitCost) AS Cost,
+                AVG(h.GrossProfit) AS Profit,
+                AVG(h.GrossMargin) AS Margin
+            FROM MenuItemGrossProfitHistory h
+            WHERE h.SnapshotDate >= @StartDate
+              AND h.SnapshotDate < @EndDate
+              AND h.MenuItemId = @MenuItemId
             GROUP BY {dateFormat}
             ORDER BY Period;";
 
-        var results = await connection.QueryAsync<MenuItemTrendPoint>(sql, new { StartDate = startDate, EndDate = endDate, LocationId = locationId, MenuItemId = menuItemId });
+        var results = await connection.QueryAsync<MenuItemTrendPoint>(sql, new { StartDate = startDate, EndDate = endDate, MenuItemId = menuItemId });
         return results.ToList();
     }
 }
