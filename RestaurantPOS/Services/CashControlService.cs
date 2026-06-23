@@ -158,7 +158,7 @@ namespace RestaurantPOS.Services
             connection.Open();
 
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT TransactionGuid, ShiftId, Timestamp, Type, Amount, Reason, Description FROM CashTransactions ORDER BY Timestamp";
+            cmd.CommandText = "SELECT TransactionGuid, ShiftId, Timestamp, Type, Amount, Reason, Description, RelatedInventoryCostRecordId FROM CashTransactions ORDER BY Timestamp";
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {
@@ -169,13 +169,15 @@ namespace RestaurantPOS.Services
                 var amount = Convert.ToDecimal(reader.GetValue(4));
                 var reason = reader.IsDBNull(5) ? null : reader.GetString(5);
                 var description = reader.IsDBNull(6) ? null : reader.GetString(6);
+                var relatedInventoryCostRecordId = reader.IsDBNull(7) ? (Guid?)null : Guid.Parse(reader.GetString(7));
 
                 var transaction = new CashTransaction(type, amount, reason)
                 {
                     TransactionGuid = transactionGuid,
                     ShiftId = shiftId,
                     Timestamp = DateTime.Parse(timestampText, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
-                    Description = description
+                    Description = description,
+                    RelatedInventoryCostRecordId = relatedInventoryCostRecordId
                 };
 
                 _transactions.Add(transaction);
@@ -190,8 +192,8 @@ namespace RestaurantPOS.Services
             connection.Open();
 
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = @"INSERT INTO CashTransactions (TransactionGuid, ShiftId, Timestamp, Type, Amount, Reason, Description)
-                                VALUES (@TransactionGuid, @ShiftId, @Timestamp, @Type, @Amount, @Reason, @Description);";
+            cmd.CommandText = @"INSERT INTO CashTransactions (TransactionGuid, ShiftId, Timestamp, Type, Amount, Reason, Description, RelatedInventoryCostRecordId)
+                                VALUES (@TransactionGuid, @ShiftId, @Timestamp, @Type, @Amount, @Reason, @Description, @RelatedInventoryCostRecordId);";
             cmd.Parameters.AddWithValue("@TransactionGuid", transaction.TransactionGuid.ToString());
             cmd.Parameters.AddWithValue("@ShiftId", transaction.ShiftId ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@Timestamp", transaction.Timestamp.ToString("O"));
@@ -199,6 +201,7 @@ namespace RestaurantPOS.Services
             cmd.Parameters.AddWithValue("@Amount", transaction.Amount);
             cmd.Parameters.AddWithValue("@Reason", transaction.Reason ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@Description", transaction.Description ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@RelatedInventoryCostRecordId", transaction.RelatedInventoryCostRecordId?.ToString() ?? (object)DBNull.Value);
             cmd.ExecuteNonQuery();
 
             _transactions.Add(transaction);

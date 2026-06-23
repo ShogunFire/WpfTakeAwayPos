@@ -12,9 +12,10 @@ namespace RestaurantPOS.Services
 
         public IEnumerable<InventoryCostRecord> CostRecords => _records;
 
-        public void RecordPurchase(Guid inventoryItemId, string itemName, decimal quantity, decimal totalCost, string notes = null)
+        public Guid RecordPurchase(Guid inventoryItemId, string itemName, decimal quantity, decimal totalCost, string notes = null)
         {
             // no-op
+            return Guid.Empty;
         }
 
         public IEnumerable<InventoryCostRecord> GetRecordsForItem(Guid inventoryItemId)

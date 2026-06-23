@@ -7,7 +7,7 @@ namespace RestaurantPOS.Services.Interfaces
     public interface IInventoryCostService
     {
         IEnumerable<InventoryCostRecord> CostRecords { get; }
-        void RecordPurchase(Guid inventoryItemId, string itemName, decimal quantity, decimal totalCost, string notes = null);
+        Guid RecordPurchase(Guid inventoryItemId, string itemName, decimal quantity, decimal totalCost, string notes = null);
         IEnumerable<InventoryCostRecord> GetRecordsForItem(Guid inventoryItemId);
         decimal GetAverageUnitCost(Guid inventoryItemId);
         decimal GetLastUnitCost(Guid inventoryItemId);

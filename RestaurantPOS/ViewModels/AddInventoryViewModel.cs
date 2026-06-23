@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RestaurantPOS.Models;
 using RestaurantPOS.Services.Interfaces;
+using System;
 
 namespace RestaurantPOS.ViewModels
 {
@@ -9,6 +10,7 @@ namespace RestaurantPOS.ViewModels
     {
         private readonly IInventoryService _inventoryService;
         private readonly IInventoryCostService _costService;
+        private readonly ICashControlService _cashControlService;
         private readonly IPopupService _popupService;
 
         [ObservableProperty]
@@ -26,10 +28,11 @@ namespace RestaurantPOS.ViewModels
         [ObservableProperty]
         private bool paidWithCash;
 
-        public AddInventoryViewModel(IInventoryService inventoryService, IInventoryCostService costService, IPopupService popupService)
+        public AddInventoryViewModel(IInventoryService inventoryService, IInventoryCostService costService, ICashControlService cashControlService, IPopupService popupService)
         {
             _inventoryService = inventoryService;
             _costService = costService;
+            _cashControlService = cashControlService;
             _popupService = popupService;
         }
 
@@ -86,11 +89,20 @@ namespace RestaurantPOS.ViewModels
             // Record cost if entered
             if (TotalCost > 0)
             {
-                _costService.RecordPurchase(
+                var costRecordId = _costService.RecordPurchase(
                     ActiveInventoryItem.InventoryItemId,
                     ActiveInventoryItem.Name,
                     Quantity,
                     TotalCost);
+
+                if (PaidWithCash)
+                {
+                    _cashControlService.RemoveCash(
+                        TotalCost,
+                        $"Inventory Purchase - {ActiveInventoryItem.Name}",
+                        isExpense: true,
+                        relatedInventoryCostRecordId: costRecordId == Guid.Empty ? null : costRecordId);
+                }
             }
 
             _popupService.Close();

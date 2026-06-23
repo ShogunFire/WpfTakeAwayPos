@@ -25,7 +25,7 @@ namespace RestaurantPOS.Services
         /// <summary>
         /// Records a new inventory purchase/delivery
         /// </summary>
-        public void RecordPurchase(Guid inventoryItemId, string itemName, decimal quantity, decimal totalCost, string notes = null)
+        public Guid RecordPurchase(Guid inventoryItemId, string itemName, decimal quantity, decimal totalCost, string notes = null)
         {
             var record = new InventoryCostRecord
             {
@@ -52,6 +52,8 @@ namespace RestaurantPOS.Services
             cmd.Parameters.AddWithValue("@RecordedDate", record.RecordedDate.ToString("O"));
             cmd.Parameters.AddWithValue("@Notes", record.Notes ?? (object)DBNull.Value);
             cmd.ExecuteNonQuery();
+
+            return record.Id;
         }
 
         /// <summary>
