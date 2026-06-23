@@ -1,0 +1,438 @@
+@page "/master-data"
+@using RestaurantDashboard.Data.Models
+@using RestaurantDashboard.Data.Services
+@inject IMasterDataAdminService MasterData
+
+<PageTitle>Master Data Admin</PageTitle>
+
+<div class="dashboard-root">
+    <div class="dashboard-header">
+        <h1>Master Data Admin</h1>
+        <p>Manage categories, inventory items, menu items, and menu components used by POS startup sync.</p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(statusMessage))
+    {
+        <div class="status-card">@statusMessage</div>
+    }
+
+    <div class="admin-grid">
+        <section class="card">
+            <h2>Categories</h2>
+            <div class="form-grid">
+                <input @bind="categoryForm.Name" placeholder="Name" />
+                <input @bind="categoryForm.Description" placeholder="Description" />
+                <label>
+                    <input type="checkbox" @bind="categoryForm.IsActive" /> Active
+                </label>
+                <button @onclick="SaveCategoryAsync">@(categoryForm.Id == Guid.Empty ? "Add" : "Update")</button>
+                <button @onclick="ResetCategoryForm">Clear</button>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Active</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in categories.OrderBy(c => c.Name))
+                    {
+                        <tr>
+                            <td>@item.Name</td>
+                            <td>@item.Description</td>
+                            <td>@(item.IsActive ? "Yes" : "No")</td>
+                            <td><button @onclick="() => EditCategory(item)">Edit</button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </section>
+
+        <section class="card">
+            <h2>Inventory Items</h2>
+            <div class="form-grid">
+                <input @bind="inventoryForm.Name" placeholder="Name" />
+                <input @bind="inventoryForm.Unit" placeholder="Unit (kg, unit, l...)" />
+                <input type="number" step="0.01" @bind="inventoryForm.CurrentUnitCost" placeholder="Unit Cost" />
+                <button @onclick="SaveInventoryAsync">@(inventoryForm.Id == Guid.Empty ? "Add" : "Update")</button>
+                <button @onclick="ResetInventoryForm">Clear</button>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Unit</th>
+                        <th>Cost</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in inventoryItems.OrderBy(i => i.Name))
+                    {
+                        <tr>
+                            <td>@item.Name</td>
+                            <td>@item.Unit</td>
+                            <td>@item.CurrentUnitCost.ToString("0.00")</td>
+                            <td><button @onclick="() => EditInventory(item)">Edit</button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </section>
+
+        <section class="card">
+            <h2>Menu Items</h2>
+            <div class="form-grid">
+                <input @bind="menuForm.Name" placeholder="Name" />
+                <input @bind="menuForm.Description" placeholder="Description" />
+                <select @bind="menuForm.IdCategory">
+                    <option value="@Guid.Empty">Select category</option>
+                    @foreach (var category in categories.Where(c => c.IsActive).OrderBy(c => c.Name))
+                    {
+                        <option value="@category.Id">@category.Name</option>
+                    }
+                </select>
+                <input type="number" step="0.01" @bind="menuForm.Price" placeholder="Price" />
+                <label>
+                    <input type="checkbox" @bind="menuForm.IsActive" /> Active
+                </label>
+                <button @onclick="SaveMenuItemAsync">@(menuForm.Id == Guid.Empty ? "Add" : "Update")</button>
+                <button @onclick="ResetMenuForm">Clear</button>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>Active</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in menuItems.OrderBy(m => m.Name))
+                    {
+                        <tr>
+                            <td>@item.Name</td>
+                            <td>@GetCategoryName(item.IdCategory)</td>
+                            <td>@item.Price.ToString("0.00")</td>
+                            <td>@(item.IsActive ? "Yes" : "No")</td>
+                            <td><button @onclick="() => EditMenuItem(item)">Edit</button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </section>
+
+        <section class="card">
+            <h2>Menu Components</h2>
+            <div class="form-grid">
+                <select @bind="componentForm.MenuItemId">
+                    <option value="@Guid.Empty">Select menu item</option>
+                    @foreach (var item in menuItems.Where(m => m.IsActive).OrderBy(m => m.Name))
+                    {
+                        <option value="@item.Id">@item.Name</option>
+                    }
+                </select>
+                <select @bind="componentForm.InventoryItemId">
+                    <option value="@Guid.Empty">Select inventory item</option>
+                    @foreach (var inventory in inventoryItems.OrderBy(i => i.Name))
+                    {
+                        <option value="@inventory.Id">@inventory.Name</option>
+                    }
+                </select>
+                <input type="number" step="0.0001" @bind="componentForm.Quantity" placeholder="Quantity" />
+                <button @onclick="SaveComponentAsync">@(componentForm.Id == Guid.Empty ? "Add" : "Update")</button>
+                <button @onclick="ResetComponentForm">Clear</button>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Menu Item</th>
+                        <th>Inventory Item</th>
+                        <th>Quantity</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in components.OrderBy(c => c.MenuItemName).ThenBy(c => c.InventoryItemName))
+                    {
+                        <tr>
+                            <td>@item.MenuItemName</td>
+                            <td>@item.InventoryItemName</td>
+                            <td>@item.Quantity.ToString("0.####")</td>
+                            <td><button @onclick="() => EditComponent(item)">Edit</button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </section>
+    </div>
+</div>
+
+<style>
+    .dashboard-root {
+        padding: 1.5rem;
+    }
+
+    .dashboard-header {
+        margin-bottom: 1rem;
+    }
+
+    .status-card {
+        margin-bottom: 1rem;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        background: #eef6ff;
+        border: 1px solid #b5d5ff;
+    }
+
+    .admin-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+        gap: 1rem;
+    }
+
+    .card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 1rem;
+        overflow: auto;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(140px, 1fr));
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .form-grid input,
+    .form-grid select,
+    .form-grid button {
+        padding: 0.5rem;
+        border-radius: 6px;
+        border: 1px solid #d1d5db;
+    }
+
+    .form-grid button {
+        background: #0f766e;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th,
+    td {
+        text-align: left;
+        border-bottom: 1px solid #f0f0f0;
+        padding: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    td button {
+        padding: 0.35rem 0.5rem;
+        border: 1px solid #d1d5db;
+        background: #f8fafc;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+
+    @@media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+@code {
+    private List<MasterCategory> categories = new();
+    private List<MasterInventoryItem> inventoryItems = new();
+    private List<MasterMenuItem> menuItems = new();
+    private List<MasterMenuItemComponentView> components = new();
+
+    private MasterCategory categoryForm = new() { IsActive = true };
+    private MasterInventoryItem inventoryForm = new();
+    private MasterMenuItem menuForm = new() { IsActive = true };
+    private MasterMenuItemComponent componentForm = new();
+
+    private string statusMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAllAsync();
+    }
+
+    private async Task LoadAllAsync()
+    {
+        categories = await MasterData.GetCategoriesAsync();
+        inventoryItems = await MasterData.GetInventoryItemsAsync();
+        menuItems = await MasterData.GetMenuItemsAsync();
+        components = await MasterData.GetMenuItemComponentsAsync();
+    }
+
+    private async Task SaveCategoryAsync()
+    {
+        if (string.IsNullOrWhiteSpace(categoryForm.Name))
+        {
+            statusMessage = "Category name is required.";
+            return;
+        }
+
+        if (categoryForm.Id == Guid.Empty)
+        {
+            await MasterData.CreateCategoryAsync(categoryForm);
+            statusMessage = "Category created.";
+        }
+        else
+        {
+            await MasterData.UpdateCategoryAsync(categoryForm);
+            statusMessage = "Category updated.";
+        }
+
+        ResetCategoryForm();
+        await LoadAllAsync();
+    }
+
+    private async Task SaveInventoryAsync()
+    {
+        if (string.IsNullOrWhiteSpace(inventoryForm.Name) || string.IsNullOrWhiteSpace(inventoryForm.Unit))
+        {
+            statusMessage = "Inventory item name and unit are required.";
+            return;
+        }
+
+        if (inventoryForm.Id == Guid.Empty)
+        {
+            await MasterData.CreateInventoryItemAsync(inventoryForm);
+            statusMessage = "Inventory item created.";
+        }
+        else
+        {
+            await MasterData.UpdateInventoryItemAsync(inventoryForm);
+            statusMessage = "Inventory item updated.";
+        }
+
+        ResetInventoryForm();
+        await LoadAllAsync();
+    }
+
+    private async Task SaveMenuItemAsync()
+    {
+        if (string.IsNullOrWhiteSpace(menuForm.Name) || menuForm.IdCategory == Guid.Empty)
+        {
+            statusMessage = "Menu item name and category are required.";
+            return;
+        }
+
+        if (menuForm.Id == Guid.Empty)
+        {
+            await MasterData.CreateMenuItemAsync(menuForm);
+            statusMessage = "Menu item created.";
+        }
+        else
+        {
+            await MasterData.UpdateMenuItemAsync(menuForm);
+            statusMessage = "Menu item updated.";
+        }
+
+        ResetMenuForm();
+        await LoadAllAsync();
+    }
+
+    private async Task SaveComponentAsync()
+    {
+        if (componentForm.MenuItemId == Guid.Empty || componentForm.InventoryItemId == Guid.Empty)
+        {
+            statusMessage = "Menu item and inventory item are required for a component.";
+            return;
+        }
+
+        if (componentForm.Quantity <= 0)
+        {
+            statusMessage = "Component quantity must be greater than zero.";
+            return;
+        }
+
+        if (componentForm.Id == Guid.Empty)
+        {
+            await MasterData.CreateMenuItemComponentAsync(componentForm);
+            statusMessage = "Menu component created.";
+        }
+        else
+        {
+            await MasterData.UpdateMenuItemComponentAsync(componentForm);
+            statusMessage = "Menu component updated.";
+        }
+
+        ResetComponentForm();
+        await LoadAllAsync();
+    }
+
+    private void EditCategory(MasterCategory item)
+    {
+        categoryForm = new MasterCategory
+        {
+            Id = item.Id,
+            Name = item.Name,
+            Description = item.Description,
+            IsActive = item.IsActive
+        };
+    }
+
+    private void EditInventory(MasterInventoryItem item)
+    {
+        inventoryForm = new MasterInventoryItem
+        {
+            Id = item.Id,
+            Name = item.Name,
+            Unit = item.Unit,
+            CurrentUnitCost = item.CurrentUnitCost
+        };
+    }
+
+    private void EditMenuItem(MasterMenuItem item)
+    {
+        menuForm = new MasterMenuItem
+        {
+            Id = item.Id,
+            IdCategory = item.IdCategory,
+            Name = item.Name,
+            Description = item.Description,
+            Price = item.Price,
+            IsActive = item.IsActive
+        };
+    }
+
+    private void EditComponent(MasterMenuItemComponentView item)
+    {
+        componentForm = new MasterMenuItemComponent
+        {
+            Id = item.Id,
+            MenuItemId = item.MenuItemId,
+            InventoryItemId = item.InventoryItemId,
+            Quantity = item.Quantity
+        };
+    }
+
+    private void ResetCategoryForm() => categoryForm = new MasterCategory { IsActive = true };
+    private void ResetInventoryForm() => inventoryForm = new MasterInventoryItem();
+    private void ResetMenuForm() => menuForm = new MasterMenuItem { IsActive = true };
+    private void ResetComponentForm() => componentForm = new MasterMenuItemComponent();
+
+    private string GetCategoryName(Guid categoryId)
+        => categories.FirstOrDefault(c => c.Id == categoryId)?.Name ?? "Unknown";
+}

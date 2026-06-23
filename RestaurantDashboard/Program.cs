@@ -13,6 +13,7 @@ builder.Services.AddScoped<ISalesAnalyticsService, SalesAnalyticsService>();
 builder.Services.AddScoped<IMenuItemAnalyticsService, MenuItemAnalyticsService>();
 builder.Services.AddScoped<IInventoryAnalyticsService, InventoryAnalyticsService>();
 builder.Services.AddScoped<ILocationAnalyticsService, LocationAnalyticsService>();
+builder.Services.AddScoped<IMasterDataAdminService, MasterDataAdminService>();
 
 // Register main Analytics Service facade
 builder.Services.AddScoped<AnalyticsService>();
