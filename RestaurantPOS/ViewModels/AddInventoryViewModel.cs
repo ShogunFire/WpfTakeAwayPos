@@ -89,7 +89,7 @@ namespace RestaurantPOS.ViewModels
             // Record cost if entered
             if (TotalCost > 0)
             {
-                var costRecordId = _costService.RecordPurchase(
+                _costService.RecordPurchase(
                     ActiveInventoryItem.InventoryItemId,
                     ActiveInventoryItem.Name,
                     Quantity,
@@ -101,7 +101,7 @@ namespace RestaurantPOS.ViewModels
                         TotalCost,
                         $"Inventory Purchase - {ActiveInventoryItem.Name}",
                         isExpense: true,
-                        relatedInventoryCostRecordId: costRecordId == Guid.Empty ? null : costRecordId);
+                        isInventoryAdd: true);
                 }
             }
 

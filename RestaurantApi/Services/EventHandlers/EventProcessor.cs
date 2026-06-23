@@ -60,6 +60,7 @@ public class EventProcessor : IEventProcessor
                 Payload = payloadJson,
                 Status = "Queued",
                 ErrorMessage = null,
+                EventCreatedAt = @event.CreatedAt,
                 ReceivedAt = DateTime.Now,
                 LastAttemptAt = null,
                 AttemptCount = 0,

@@ -90,7 +90,7 @@ public class EventQueueService : BackgroundService
                     Type = processedEvent.EventType,
                     DeviceId = processedEvent.DeviceId,
                     Payload = payload,
-                    CreatedAt = processedEvent.ReceivedAt,
+                    CreatedAt = processedEvent.EventCreatedAt ?? processedEvent.ReceivedAt,
                     LocationId = processedEvent.LocationId
                 };
 

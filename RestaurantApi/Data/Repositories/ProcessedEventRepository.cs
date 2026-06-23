@@ -40,13 +40,14 @@ public class ProcessedEventRepository : IProcessedEventRepository
                     Payload = @Payload,
                     DeviceId = @DeviceId,
                     LocationId = @LocationId,
+                    EventCreatedAt = COALESCE(EventCreatedAt, @EventCreatedAt),
                     ReceivedAt = COALESCE(ReceivedAt, @ReceivedAt)
                 WHERE Id = @Id;
             END
             ELSE
             BEGIN
-                INSERT INTO ProcessedEvents (Id, EventType, Payload, Status, ErrorMessage, ReceivedAt, LastAttemptAt, AttemptCount, ProcessedAt, DeviceId, LocationId)
-                VALUES (@Id, @EventType, @Payload, @Status, @ErrorMessage, @ReceivedAt, @LastAttemptAt, @AttemptCount, @ProcessedAt, @DeviceId, @LocationId);
+                INSERT INTO ProcessedEvents (Id, EventType, Payload, Status, ErrorMessage, EventCreatedAt, ReceivedAt, LastAttemptAt, AttemptCount, ProcessedAt, DeviceId, LocationId)
+                VALUES (@Id, @EventType, @Payload, @Status, @ErrorMessage, @EventCreatedAt, @ReceivedAt, @LastAttemptAt, @AttemptCount, @ProcessedAt, @DeviceId, @LocationId);
             END;";
 
         await connection.ExecuteAsync(sql, processedEvent);
@@ -80,7 +81,7 @@ public class ProcessedEventRepository : IProcessedEventRepository
         var sql = @"
             SELECT * FROM ProcessedEvents
             WHERE Status = 'Queued'
-            ORDER BY ReceivedAt ASC;";
+            ORDER BY COALESCE(EventCreatedAt, ReceivedAt) ASC, ReceivedAt ASC, Id ASC;";
         var results = await connection.QueryAsync<ProcessedEvent>(sql);
         return results.ToList();
     }

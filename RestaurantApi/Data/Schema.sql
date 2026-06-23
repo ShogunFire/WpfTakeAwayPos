@@ -76,6 +76,7 @@ BEGIN
         Payload NVARCHAR(MAX) NULL,
         Status NVARCHAR(20) NOT NULL,
         ErrorMessage NVARCHAR(MAX) NULL,
+        EventCreatedAt DATETIME2 NULL,
         ReceivedAt DATETIME2 NOT NULL,
         LastAttemptAt DATETIME2 NULL,
         AttemptCount INT NOT NULL DEFAULT(0),
@@ -85,6 +86,7 @@ BEGIN
     );
     
     CREATE INDEX IX_ProcessedEvents_Status ON ProcessedEvents(Status);
+    CREATE INDEX IX_ProcessedEvents_EventCreatedAt ON ProcessedEvents(EventCreatedAt);
     CREATE INDEX IX_ProcessedEvents_ReceivedAt ON ProcessedEvents(ReceivedAt);
 END
 ELSE
@@ -93,6 +95,23 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ProcessedEvents' AND COLUMN_NAME = 'LocationId')
     BEGIN
         ALTER TABLE ProcessedEvents ADD LocationId UNIQUEIDENTIFIER NULL;
+    END
+
+    -- Add EventCreatedAt column if it doesn't exist
+    IF NOT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ProcessedEvents' AND COLUMN_NAME = 'EventCreatedAt')
+    BEGIN
+        ALTER TABLE ProcessedEvents ADD EventCreatedAt DATETIME2 NULL;
+
+        -- Backfill existing rows to preserve ordering behavior for historic events
+        UPDATE ProcessedEvents
+        SET EventCreatedAt = ReceivedAt
+        WHERE EventCreatedAt IS NULL;
+    END
+
+    -- Ensure EventCreatedAt index exists
+    IF NOT EXISTS(SELECT 1 FROM sys.indexes WHERE name = 'IX_ProcessedEvents_EventCreatedAt' AND object_id = OBJECT_ID('ProcessedEvents'))
+    BEGIN
+        CREATE INDEX IX_ProcessedEvents_EventCreatedAt ON ProcessedEvents(EventCreatedAt);
     END
 END;
 

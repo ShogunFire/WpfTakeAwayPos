@@ -12,6 +12,7 @@ public class ProcessedEvent
     public string Status { get; set; } = "Received";
     public string? Payload { get; set; }
     public string? ErrorMessage { get; set; }
+    public DateTime? EventCreatedAt { get; set; }
     public DateTime ReceivedAt { get; set; }
     public DateTime? LastAttemptAt { get; set; }
     public int AttemptCount { get; set; }

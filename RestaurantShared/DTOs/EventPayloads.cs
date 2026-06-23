@@ -57,7 +57,7 @@ public class CashTransactionPayload
     public string? Description { get; set; }
     public DateTime Timestamp { get; set; }
     public bool IsExpense { get; set; }
-    public Guid? RelatedInventoryCostRecordId { get; set; }
+    public bool IsInventoryAdd { get; set; }
 }
 
 public class InventoryItemPayload

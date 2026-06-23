@@ -67,58 +67,49 @@ public class CashTransactionEventHandler : IEventHandler
         // Create or link expense record if this is an expense
         if (payload.IsExpense)
         {
-            // First check if there's already an expense for this inventory delivery
-            Expense? expense = null;
-            if (payload.RelatedInventoryCostRecordId.HasValue)
+            // Inventory purchase expenses are created by InventoryItemAdded processing.
+            // Skip creation here to avoid duplicate expense records for the same purchase.
+            if (payload.IsInventoryAdd)
             {
-                expense = await _expenseRepository.GetByInventoryCostRecordIdAsync(payload.RelatedInventoryCostRecordId.Value);
+                _logger.LogInformation(
+                    "Skipping expense creation for inventory cash transaction {TransactionId}; inventory handler owns inventory expenses",
+                    transaction.Id);
+                return;
             }
 
-            if (expense != null)
+            // Create new expense (non-inventory expense like rent, utilities)
+            // Determine category from reason/description
+            var categoryName = DetermineExpenseCategory(payload.Reason, payload.Description);
+            var category = await _expenseCategoryRepository.GetByNameAsync(categoryName);
+
+            if (category != null)
             {
-                // Link cash transaction to existing expense (inventory was already recorded)
-                await _expenseRepository.LinkCashTransactionAsync(expense.Id, transaction.Id);
+                var newExpense = new Expense
+                {
+                    Id = Guid.NewGuid(),
+                    ExpenseCategoryId = category.Id,
+                    Amount = Math.Abs(payload.Amount), // Expenses are positive
+                    Description = string.IsNullOrWhiteSpace(payload.Description)
+                        ? payload.Reason ?? "Cash expense"
+                        : payload.Description,
+                    ExpenseDate = payload.Timestamp == default ? DateTime.Now : payload.Timestamp,
+                    LocationId = @event.LocationId ?? Guid.Empty,
+                    ShiftId = payload.ShiftId,
+                    CashTransactionId = transaction.Id,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
+                };
+                await _expenseRepository.AddAsync(newExpense);
 
                 _logger.LogInformation(
-                    "Linked cash transaction {TransactionId} to existing expense {ExpenseId}",
-                    transaction.Id, expense.Id);
+                    "Created expense record for cash transaction: {Category} @ ${Amount}",
+                    categoryName, newExpense.Amount);
             }
             else
             {
-                // Create new expense (non-inventory expense like rent, utilities)
-                // Determine category from reason/description
-                var categoryName = DetermineExpenseCategory(payload.Reason, payload.Description);
-                var category = await _expenseCategoryRepository.GetByNameAsync(categoryName);
-
-                if (category != null)
-                {
-                    var newExpense = new Expense
-                    {
-                        Id = Guid.NewGuid(),
-                        ExpenseCategoryId = category.Id,
-                        Amount = Math.Abs(payload.Amount), // Expenses are positive
-                        Description = string.IsNullOrWhiteSpace(payload.Description) 
-                            ? payload.Reason ?? "Cash expense" 
-                            : payload.Description,
-                        ExpenseDate = payload.Timestamp == default ? DateTime.Now : payload.Timestamp,
-                        LocationId = @event.LocationId ?? Guid.Empty,
-                        ShiftId = payload.ShiftId,
-                        CashTransactionId = transaction.Id,
-                        CreatedAt = DateTime.Now,
-                        UpdatedAt = DateTime.Now
-                    };
-                    await _expenseRepository.AddAsync(newExpense);
-
-                    _logger.LogInformation(
-                        "Created expense record for cash transaction: {Category} @ ${Amount}",
-                        categoryName, newExpense.Amount);
-                }
-                else
-                {
-                    _logger.LogWarning(
-                        "Expense category '{CategoryName}' not found, cannot create expense for cash transaction",
-                        categoryName);
-                }
+                _logger.LogWarning(
+                    "Expense category '{CategoryName}' not found, cannot create expense for cash transaction",
+                    categoryName);
             }
         }
     }

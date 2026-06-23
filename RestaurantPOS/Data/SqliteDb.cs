@@ -32,7 +32,7 @@ namespace RestaurantPOS.Data
 
             CreateTables(connection);
             EnsureCashTransactionGuidColumn(connection);
-            EnsureCashTransactionRelatedInventoryCostRecordIdColumn(connection);
+            RemoveLegacyCashTransactionRelatedInventoryCostRecordIdColumn(connection);
             EnsureShiftGuidColumn(connection);
             EnsureSyncEventsLocationIdColumn(connection);
             SeedIfEmpty(connection);
@@ -88,31 +88,6 @@ namespace RestaurantPOS.Data
             }
         }
 
-        private static void EnsureCashTransactionRelatedInventoryCostRecordIdColumn(SqliteConnection connection)
-        {
-            using var cmd = connection.CreateCommand();
-            cmd.CommandText = "PRAGMA table_info(CashTransactions);";
-
-            using var reader = cmd.ExecuteReader();
-            var hasColumn = false;
-            while (reader.Read())
-            {
-                var columnName = reader.GetString(1);
-                if (string.Equals(columnName, "RelatedInventoryCostRecordId", StringComparison.OrdinalIgnoreCase))
-                {
-                    hasColumn = true;
-                    break;
-                }
-            }
-
-            if (!hasColumn)
-            {
-                using var alterCmd = connection.CreateCommand();
-                alterCmd.CommandText = "ALTER TABLE CashTransactions ADD COLUMN RelatedInventoryCostRecordId TEXT;";
-                alterCmd.ExecuteNonQuery();
-            }
-        }
-
         private static void EnsureSyncEventsLocationIdColumn(SqliteConnection connection)
         {
             using var cmd = connection.CreateCommand();
@@ -136,6 +111,73 @@ namespace RestaurantPOS.Data
                 alterCmd.CommandText = "ALTER TABLE SyncEvents ADD COLUMN LocationId TEXT;";
                 alterCmd.ExecuteNonQuery();
             }
+        }
+
+        private static void RemoveLegacyCashTransactionRelatedInventoryCostRecordIdColumn(SqliteConnection connection)
+        {
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "PRAGMA table_info(CashTransactions);";
+
+            using var reader = cmd.ExecuteReader();
+            var hasColumn = false;
+            while (reader.Read())
+            {
+                var columnName = reader.GetString(1);
+                if (string.Equals(columnName, "RelatedInventoryCostRecordId", StringComparison.OrdinalIgnoreCase))
+                {
+                    hasColumn = true;
+                    break;
+                }
+            }
+
+            if (!hasColumn)
+            {
+                return;
+            }
+
+            using var tx = connection.BeginTransaction();
+
+            using (var createCmd = connection.CreateCommand())
+            {
+                createCmd.Transaction = tx;
+                createCmd.CommandText = @"CREATE TABLE IF NOT EXISTS CashTransactions_new (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    TransactionGuid TEXT,
+                    ShiftId INTEGER,
+                    Timestamp TEXT NOT NULL,
+                    Type INTEGER NOT NULL,
+                    Amount REAL NOT NULL,
+                    Reason TEXT,
+                    Description TEXT,
+                    FOREIGN KEY(ShiftId) REFERENCES Shifts(ShiftId)
+                );";
+                createCmd.ExecuteNonQuery();
+            }
+
+            using (var copyCmd = connection.CreateCommand())
+            {
+                copyCmd.Transaction = tx;
+                copyCmd.CommandText = @"INSERT INTO CashTransactions_new (Id, TransactionGuid, ShiftId, Timestamp, Type, Amount, Reason, Description)
+                                        SELECT Id, TransactionGuid, ShiftId, Timestamp, Type, Amount, Reason, Description
+                                        FROM CashTransactions;";
+                copyCmd.ExecuteNonQuery();
+            }
+
+            using (var dropCmd = connection.CreateCommand())
+            {
+                dropCmd.Transaction = tx;
+                dropCmd.CommandText = "DROP TABLE CashTransactions;";
+                dropCmd.ExecuteNonQuery();
+            }
+
+            using (var renameCmd = connection.CreateCommand())
+            {
+                renameCmd.Transaction = tx;
+                renameCmd.CommandText = "ALTER TABLE CashTransactions_new RENAME TO CashTransactions;";
+                renameCmd.ExecuteNonQuery();
+            }
+
+            tx.Commit();
         }
 
         private static void CreateTables(SqliteConnection connection)
