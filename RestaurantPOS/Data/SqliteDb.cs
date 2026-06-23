@@ -31,153 +31,7 @@ namespace RestaurantPOS.Data
             connection.Open();
 
             CreateTables(connection);
-            EnsureCashTransactionGuidColumn(connection);
-            RemoveLegacyCashTransactionRelatedInventoryCostRecordIdColumn(connection);
-            EnsureShiftGuidColumn(connection);
-            EnsureSyncEventsLocationIdColumn(connection);
             SeedIfEmpty(connection);
-        }
-
-        private static void EnsureShiftGuidColumn(SqliteConnection connection)
-        {
-            using var cmd = connection.CreateCommand();
-            cmd.CommandText = "PRAGMA table_info(Shifts);";
-
-            using var reader = cmd.ExecuteReader();
-            var hasColumn = false;
-            while (reader.Read())
-            {
-                var columnName = reader.GetString(1);
-                if (string.Equals(columnName, "ShiftGuid", StringComparison.OrdinalIgnoreCase))
-                {
-                    hasColumn = true;
-                    break;
-                }
-            }
-
-            if (!hasColumn)
-            {
-                using var alterCmd = connection.CreateCommand();
-                alterCmd.CommandText = "ALTER TABLE Shifts ADD COLUMN ShiftGuid TEXT;";
-                alterCmd.ExecuteNonQuery();
-            }
-        }
-
-        private static void EnsureCashTransactionGuidColumn(SqliteConnection connection)
-        {
-            using var cmd = connection.CreateCommand();
-            cmd.CommandText = "PRAGMA table_info(CashTransactions);";
-
-            using var reader = cmd.ExecuteReader();
-            var hasColumn = false;
-            while (reader.Read())
-            {
-                var columnName = reader.GetString(1);
-                if (string.Equals(columnName, "TransactionGuid", StringComparison.OrdinalIgnoreCase))
-                {
-                    hasColumn = true;
-                    break;
-                }
-            }
-
-            if (!hasColumn)
-            {
-                using var alterCmd = connection.CreateCommand();
-                alterCmd.CommandText = "ALTER TABLE CashTransactions ADD COLUMN TransactionGuid TEXT;";
-                alterCmd.ExecuteNonQuery();
-            }
-        }
-
-        private static void EnsureSyncEventsLocationIdColumn(SqliteConnection connection)
-        {
-            using var cmd = connection.CreateCommand();
-            cmd.CommandText = "PRAGMA table_info(SyncEvents);";
-
-            using var reader = cmd.ExecuteReader();
-            var hasColumn = false;
-            while (reader.Read())
-            {
-                var columnName = reader.GetString(1);
-                if (string.Equals(columnName, "LocationId", StringComparison.OrdinalIgnoreCase))
-                {
-                    hasColumn = true;
-                    break;
-                }
-            }
-
-            if (!hasColumn)
-            {
-                using var alterCmd = connection.CreateCommand();
-                alterCmd.CommandText = "ALTER TABLE SyncEvents ADD COLUMN LocationId TEXT;";
-                alterCmd.ExecuteNonQuery();
-            }
-        }
-
-        private static void RemoveLegacyCashTransactionRelatedInventoryCostRecordIdColumn(SqliteConnection connection)
-        {
-            using var cmd = connection.CreateCommand();
-            cmd.CommandText = "PRAGMA table_info(CashTransactions);";
-
-            using var reader = cmd.ExecuteReader();
-            var hasColumn = false;
-            while (reader.Read())
-            {
-                var columnName = reader.GetString(1);
-                if (string.Equals(columnName, "RelatedInventoryCostRecordId", StringComparison.OrdinalIgnoreCase))
-                {
-                    hasColumn = true;
-                    break;
-                }
-            }
-
-            if (!hasColumn)
-            {
-                return;
-            }
-
-            using var tx = connection.BeginTransaction();
-
-            using (var createCmd = connection.CreateCommand())
-            {
-                createCmd.Transaction = tx;
-                createCmd.CommandText = @"CREATE TABLE IF NOT EXISTS CashTransactions_new (
-                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    TransactionGuid TEXT,
-                    ShiftId INTEGER,
-                    Timestamp TEXT NOT NULL,
-                    Type INTEGER NOT NULL,
-                    Amount REAL NOT NULL,
-                    Reason TEXT,
-                    Description TEXT,
-                    FOREIGN KEY(ShiftId) REFERENCES Shifts(ShiftId)
-                );";
-                createCmd.ExecuteNonQuery();
-            }
-
-            using (var copyCmd = connection.CreateCommand())
-            {
-                copyCmd.Transaction = tx;
-                copyCmd.CommandText = @"INSERT INTO CashTransactions_new (Id, TransactionGuid, ShiftId, Timestamp, Type, Amount, Reason, Description)
-                                        SELECT Id, TransactionGuid, ShiftId, Timestamp, Type, Amount, Reason, Description
-                                        FROM CashTransactions;";
-                copyCmd.ExecuteNonQuery();
-            }
-
-            using (var dropCmd = connection.CreateCommand())
-            {
-                dropCmd.Transaction = tx;
-                dropCmd.CommandText = "DROP TABLE CashTransactions;";
-                dropCmd.ExecuteNonQuery();
-            }
-
-            using (var renameCmd = connection.CreateCommand())
-            {
-                renameCmd.Transaction = tx;
-                renameCmd.CommandText = "ALTER TABLE CashTransactions_new RENAME TO CashTransactions;";
-                renameCmd.ExecuteNonQuery();
-            }
-
-            tx.Commit();
         }
 
         private static void CreateTables(SqliteConnection connection)
@@ -261,6 +115,7 @@ namespace RestaurantPOS.Data
                 );",
                 @"CREATE TABLE IF NOT EXISTS Shifts (
                     ShiftId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ShiftGuid TEXT,
                     StartDateTime TEXT NOT NULL,
                     EndDateTime TEXT,
                     OpeningCash REAL NOT NULL,
@@ -277,7 +132,8 @@ namespace RestaurantPOS.Data
                     Payload TEXT NOT NULL,
                     CreatedAt DATETIME NOT NULL,
                     SyncedAt DATETIME NULL,
-                    DeviceId TEXT NOT NULL
+                    DeviceId TEXT NOT NULL,
+                    LocationId TEXT
                 );"
             };
 
