@@ -206,17 +206,17 @@ namespace RestaurantPOS.Services
 
             _transactions.Add(transaction);
 
-            _syncEventService.CreateEvent(EventTypes.CashTransactionCreated, new
+            _syncEventService.CreateEvent(EventTypes.CashTransactionCreated, new CashTransactionPayload
             {
                 TransactionGuid = transaction.TransactionGuid,
-                ShiftId = (object)null,
+                ShiftId = null,
                 Type = transaction.Type.ToString(),
-                transaction.Amount,
-                transaction.Reason,
-                transaction.Description,
-                transaction.Timestamp,
-                transaction.IsExpense,
-                transaction.RelatedInventoryCostRecordId
+                Amount = transaction.Amount,
+                Reason = transaction.Reason,
+                Description = transaction.Description,
+                Timestamp = transaction.Timestamp,
+                IsExpense = transaction.IsExpense,
+                RelatedInventoryCostRecordId = transaction.RelatedInventoryCostRecordId
             });
         }
 

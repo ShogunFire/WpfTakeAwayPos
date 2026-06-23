@@ -61,7 +61,7 @@ namespace RestaurantPOS.Services
 
             var orderLines = order.OrderLines
                 .Where(line => line.Item != null)
-                .Select(line => new
+                .Select(line => new OrderLinePayload
                 {
                     MenuItemId = line.Item.OriginalMenuItemId,
                     MenuItemName = line.Item.Name,
@@ -73,7 +73,7 @@ namespace RestaurantPOS.Services
 
             var activeShift = _shiftService.GetActiveShift();
 
-            _syncEventService.CreateEvent(EventTypes.OrderCompleted, new
+            _syncEventService.CreateEvent(EventTypes.OrderCompleted, new OrderPayload
             {
                 OrderId = order.OrderGuid,
                 ShiftId = activeShift?.ShiftGuid,

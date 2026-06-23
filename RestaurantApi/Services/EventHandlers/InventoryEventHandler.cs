@@ -111,7 +111,7 @@ public class InventoryEventHandler : IEventHandler
 
             await _inventoryCostRepository.AddAsync(costRecord);
 
-            // Create expense record if this was paid for
+            // Create expense record if this was paid in cash
             if (payload.PaidWithCash)
             {
                 // Check if expense already exists for this cost record
@@ -221,18 +221,6 @@ public class InventoryEventHandler : IEventHandler
             item.Unit,
             locationId,
             payload.Reason ?? "N/A");
-    }
-
-    private class InventoryItemPayload
-    {
-        public Guid? InventoryItemId { get; set; }
-        public Guid? ShiftId { get; set; }
-        public string? Name { get; set; }
-        public decimal Quantity { get; set; }
-        public string? Unit { get; set; }
-        public string? Reason { get; set; }
-        public decimal? TotalCost { get; set; }
-        public bool PaidWithCash { get; set; }
     }
 
     private static T? DeserializePayload<T>(object? payload) where T : class

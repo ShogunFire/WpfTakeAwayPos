@@ -58,7 +58,7 @@ namespace RestaurantPOS.Services
             _activeShift = shift;
 
             // Create shift started event
-            _syncEventService.CreateEvent(EventTypes.ShiftStarted, new
+            _syncEventService.CreateEvent(EventTypes.ShiftStarted, new ShiftStartedPayload
             {
                 ShiftId = shift.ShiftGuid,
                 StartDateTime = shift.StartDateTime,
@@ -102,7 +102,7 @@ namespace RestaurantPOS.Services
             cmd.ExecuteNonQuery();
 
             // Create shift ended event
-            _syncEventService.CreateEvent(EventTypes.ShiftEnded, new
+            _syncEventService.CreateEvent(EventTypes.ShiftEnded, new ShiftEndedPayload
             {
                 ShiftId = _activeShift.ShiftGuid,
                 EndDateTime = _activeShift.EndDateTime,

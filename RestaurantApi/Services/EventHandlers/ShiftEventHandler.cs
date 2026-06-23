@@ -95,23 +95,6 @@ public class ShiftEventHandler : IEventHandler
         _logger.LogInformation("Shift ended: {ShiftId}", shift.Id);
     }
 
-    private class ShiftStartedPayload
-    {
-        public Guid ShiftId { get; set; }
-        public DateTime StartDateTime { get; set; }
-        public decimal OpeningCash { get; set; }
-    }
-
-    private class ShiftEndedPayload
-    {
-        public Guid ShiftId { get; set; }
-        public DateTime? EndDateTime { get; set; }
-        public decimal? DeclaredCash { get; set; }
-        public decimal? ExpectedCash { get; set; }
-        public decimal? Difference { get; set; }
-        public string? Notes { get; set; }
-    }
-
     private static T? DeserializePayload<T>(object? payload) where T : class
     {
         if (payload == null)

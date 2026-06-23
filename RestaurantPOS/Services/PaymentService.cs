@@ -37,12 +37,12 @@ namespace RestaurantPOS.Services
             cmd.Parameters.AddWithValue("@PaymentMethod", payment.PaymentMethod ?? string.Empty);
             payment.PaymentId = (int)(long)cmd.ExecuteScalar();
 
-            _syncEventService.CreateEvent(EventTypes.PaymentProcessed, new
+            _syncEventService.CreateEvent(EventTypes.PaymentProcessed, new PaymentPayload
             {
                 PaymentId = payment.PaymentGuid,
                 OrderId = payment.OrderGuid,
-                payment.Amount,
-                payment.PaymentMethod
+                Amount = payment.Amount,
+                PaymentMethod = payment.PaymentMethod
             });
 
             return true; // Assume payment is successful

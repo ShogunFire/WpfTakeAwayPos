@@ -139,19 +139,6 @@ public class CashTransactionEventHandler : IEventHandler
         return "Other";
     }
 
-    private class CashTransactionPayload
-    {
-        public Guid? TransactionGuid { get; set; }
-        public Guid? ShiftId { get; set; }
-        public string? Type { get; set; }
-        public decimal Amount { get; set; }
-        public string? Reason { get; set; }
-        public string? Description { get; set; }
-        public DateTime Timestamp { get; set; }
-        public bool IsExpense { get; set; }
-        public Guid? RelatedInventoryCostRecordId { get; set; }
-    }
-
     private static T? DeserializePayload<T>(object? payload) where T : class
     {
         if (payload == null)

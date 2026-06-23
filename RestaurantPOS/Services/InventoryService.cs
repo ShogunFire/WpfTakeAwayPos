@@ -41,7 +41,7 @@ namespace RestaurantPOS.Services
             cmd.ExecuteNonQuery();
 
             InventoryItems.Add(item);
-            _syncEventService.CreateEvent(EventTypes.InventoryItemAdded, new
+            _syncEventService.CreateEvent(EventTypes.InventoryItemAdded, new InventoryItemPayload
             {
                 InventoryItemId = item.InventoryItemId,
                 Name = item.Name,
@@ -74,7 +74,7 @@ namespace RestaurantPOS.Services
             {
                 item.Quantity = 0;
                 UpdateQuantity(item);
-                _syncEventService.CreateEvent(EventTypes.InventoryItemRemoved, new
+                _syncEventService.CreateEvent(EventTypes.InventoryItemRemoved, new InventoryItemPayload
                 {
                     InventoryItemId = item.InventoryItemId,
                     Quantity = quantity,
@@ -85,7 +85,7 @@ namespace RestaurantPOS.Services
 
             item.Quantity -= quantity;
             UpdateQuantity(item);
-            _syncEventService.CreateEvent(EventTypes.InventoryItemRemoved, new
+            _syncEventService.CreateEvent(EventTypes.InventoryItemRemoved, new InventoryItemPayload
             {
                 InventoryItemId = item.InventoryItemId,
                 Quantity = quantity,
@@ -105,9 +105,9 @@ namespace RestaurantPOS.Services
 
             item.Quantity += quantity;
             UpdateQuantity(item);
-            _syncEventService.CreateEvent(EventTypes.InventoryItemAdded, new
+            _syncEventService.CreateEvent(EventTypes.InventoryItemAdded, new InventoryItemPayload
             {
-                ShiftId = (object)null,
+                ShiftId = null,
                 InventoryItemId = item.InventoryItemId,
                 Name = item.Name,
                 Quantity = quantity,

@@ -74,14 +74,6 @@ public class PaymentEventHandler : IEventHandler
             payment.Id, payment.Amount, payment.PaymentMethod);
     }
 
-    private class PaymentPayload
-    {
-        public Guid? PaymentId { get; set; }
-        public Guid OrderId { get; set; }
-        public decimal Amount { get; set; }
-        public string? PaymentMethod { get; set; }
-    }
-
     private static T? DeserializePayload<T>(object? payload) where T : class
     {
         if (payload == null)
