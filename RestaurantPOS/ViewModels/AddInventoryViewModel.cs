@@ -101,7 +101,7 @@ namespace RestaurantPOS.ViewModels
                         TotalCost,
                         $"Inventory Purchase - {ActiveInventoryItem.Name}",
                         isExpense: true,
-                        isInventoryAdd: true);
+                        syncToApi: false);
                 }
             }
 

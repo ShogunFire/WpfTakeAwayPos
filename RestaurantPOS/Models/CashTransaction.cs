@@ -12,9 +12,8 @@ namespace RestaurantPOS.Models
         public string Reason { get; set; }
         public string Description { get; set; }
         public bool IsExpense { get; set; }
-        public bool IsInventoryAdd { get; set; }
 
-        public CashTransaction(CashTransactionType type, decimal amount, string reason = null, bool isExpense = false, bool isInventoryAdd = false)
+        public CashTransaction(CashTransactionType type, decimal amount, string reason = null, bool isExpense = false)
         {
             TransactionGuid = Guid.NewGuid();
             Timestamp = DateTime.Now;
@@ -22,7 +21,6 @@ namespace RestaurantPOS.Models
             Amount = amount;
             Reason = reason;
             IsExpense = isExpense;
-            IsInventoryAdd = isInventoryAdd;
             Description = GenerateDescription();
         }
 

@@ -65,10 +65,10 @@ namespace RestaurantPOS.Services
             InsertTransaction(new CashTransaction(CashTransactionType.Sale, amount));
         }
 
-        public void RemoveCash(decimal amount, string reason, bool isExpense = false, bool isInventoryAdd = false)
+        public void RemoveCash(decimal amount, string reason, bool isExpense = false, bool syncToApi = true)
         {
             if (amount <= 0) return;
-            InsertTransaction(new CashTransaction(CashTransactionType.Removal, amount, reason, isExpense, isInventoryAdd));
+            InsertTransaction(new CashTransaction(CashTransactionType.Removal, amount, reason, isExpense), syncToApi);
         }
 
         public void AddCash(decimal amount, string reason)
@@ -182,7 +182,7 @@ namespace RestaurantPOS.Services
             }
         }
 
-        private void InsertTransaction(CashTransaction transaction)
+        private void InsertTransaction(CashTransaction transaction, bool syncToApi = true)
         {
             transaction.ShiftId = _shiftService.GetActiveShiftId();
             
@@ -203,6 +203,11 @@ namespace RestaurantPOS.Services
 
             _transactions.Add(transaction);
 
+            if (!syncToApi)
+            {
+                return;
+            }
+
             _syncEventService.CreateEvent(EventTypes.CashTransactionCreated, new CashTransactionPayload
             {
                 TransactionGuid = transaction.TransactionGuid,
@@ -212,8 +217,7 @@ namespace RestaurantPOS.Services
                 Reason = transaction.Reason,
                 Description = transaction.Description,
                 Timestamp = transaction.Timestamp,
-                IsExpense = transaction.IsExpense,
-                IsInventoryAdd = transaction.IsInventoryAdd
+                IsExpense = transaction.IsExpense
             });
         }
 

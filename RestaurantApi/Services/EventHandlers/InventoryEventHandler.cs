@@ -10,6 +10,7 @@ public class InventoryEventHandler : IEventHandler
     private readonly IInventoryItemRepository _inventoryRepository;
     private readonly ILocationInventoryRepository _locationInventoryRepository;
     private readonly IInventoryCostRecordRepository _inventoryCostRepository;
+    private readonly ICashTransactionRepository _cashTransactionRepository;
     private readonly IExpenseRepository _expenseRepository;
     private readonly IExpenseCategoryRepository _expenseCategoryRepository;
     private readonly IMenuItemCostService _menuItemCostService;
@@ -19,6 +20,7 @@ public class InventoryEventHandler : IEventHandler
         IInventoryItemRepository inventoryRepository,
         ILocationInventoryRepository locationInventoryRepository,
         IInventoryCostRecordRepository inventoryCostRepository,
+        ICashTransactionRepository cashTransactionRepository,
         IExpenseRepository expenseRepository,
         IExpenseCategoryRepository expenseCategoryRepository,
         IMenuItemCostService menuItemCostService,
@@ -27,6 +29,7 @@ public class InventoryEventHandler : IEventHandler
         _inventoryRepository = inventoryRepository;
         _locationInventoryRepository = locationInventoryRepository;
         _inventoryCostRepository = inventoryCostRepository;
+        _cashTransactionRepository = cashTransactionRepository;
         _expenseRepository = expenseRepository;
         _expenseCategoryRepository = expenseCategoryRepository;
         _menuItemCostService = menuItemCostService;
@@ -118,6 +121,22 @@ public class InventoryEventHandler : IEventHandler
                 var existingExpense = await _expenseRepository.GetByInventoryCostRecordIdAsync(costRecord.Id);
                 if (existingExpense == null)
                 {
+                    var cashTransaction = new CashTransaction
+                    {
+                        Id = Guid.NewGuid(),
+                        ShiftId = payload.ShiftId,
+                        LocationId = locationId,
+                        TransactionType = "Removal",
+                        Amount = payload.TotalCost.Value,
+                        Reason = $"Inventory Purchase - {item.Name}",
+                        Description = $"Inventory Purchase - {item.Name}",
+                        OccurredAt = @event.CreatedAt,
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now
+                    };
+
+                    await _cashTransactionRepository.AddAsync(cashTransaction);
+
                     // Get COGS category
                     var cogsCategory = await _expenseCategoryRepository.GetByNameAsync("COGS - Inventory");
                     if (cogsCategory != null)
@@ -132,6 +151,7 @@ public class InventoryEventHandler : IEventHandler
                             LocationId = locationId,
                             ShiftId = payload.ShiftId,
                             InventoryCostRecordId = costRecord.Id,
+                            CashTransactionId = cashTransaction.Id,
                             CreatedAt = DateTime.Now,
                             UpdatedAt = DateTime.Now
                         };

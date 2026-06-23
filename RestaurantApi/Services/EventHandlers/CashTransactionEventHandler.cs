@@ -67,16 +67,6 @@ public class CashTransactionEventHandler : IEventHandler
         // Create or link expense record if this is an expense
         if (payload.IsExpense)
         {
-            // Inventory purchase expenses are created by InventoryItemAdded processing.
-            // Skip creation here to avoid duplicate expense records for the same purchase.
-            if (payload.IsInventoryAdd)
-            {
-                _logger.LogInformation(
-                    "Skipping expense creation for inventory cash transaction {TransactionId}; inventory handler owns inventory expenses",
-                    transaction.Id);
-                return;
-            }
-
             // Create new expense (non-inventory expense like rent, utilities)
             // Determine category from reason/description
             var categoryName = DetermineExpenseCategory(payload.Reason, payload.Description);
