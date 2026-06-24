@@ -22,6 +22,8 @@ public interface IMasterDataAdminService
 
     Task CreateMenuItemComponentAsync(MasterMenuItemComponent component);
     Task UpdateMenuItemComponentAsync(MasterMenuItemComponent component);
+    Task<List<MasterMenuItemComponentView>> GetMenuItemComponentsByMenuItemIdAsync(Guid menuItemId);
+    Task DeleteMenuItemComponentAsync(Guid id);
 }
 
 public class MasterDataAdminService : IMasterDataAdminService
@@ -144,7 +146,7 @@ public class MasterDataAdminService : IMasterDataAdminService
             inventoryItem.Id,
             inventoryItem.Name,
             inventoryItem.Unit,
-            inventoryItem.CurrentUnitCost,
+            CurrentUnitCost = 0m,
             Now = DateTime.UtcNow
         });
     }
@@ -156,8 +158,6 @@ public class MasterDataAdminService : IMasterDataAdminService
             UPDATE InventoryItems
             SET Name = @Name,
                 Unit = @Unit,
-                CurrentUnitCost = @CurrentUnitCost,
-                LastCostUpdate = @Now,
                 UpdatedAt = @Now
             WHERE Id = @Id";
 
@@ -166,7 +166,6 @@ public class MasterDataAdminService : IMasterDataAdminService
             inventoryItem.Id,
             inventoryItem.Name,
             inventoryItem.Unit,
-            inventoryItem.CurrentUnitCost,
             Now = DateTime.UtcNow
         });
     }
@@ -240,5 +239,32 @@ public class MasterDataAdminService : IMasterDataAdminService
             WHERE Id = @Id";
 
         await connection.ExecuteAsync(sql, component);
+    }
+
+    public async Task<List<MasterMenuItemComponentView>> GetMenuItemComponentsByMenuItemIdAsync(Guid menuItemId)
+    {
+        using var connection = new SqlConnection(_connectionString);
+        const string sql = @"
+            SELECT
+                c.Id,
+                c.MenuItemId,
+                m.Name AS MenuItemName,
+                c.InventoryItemId,
+                i.Name AS InventoryItemName,
+                c.Quantity
+            FROM MenuItemComponents c
+            INNER JOIN MenuItems m ON m.Id = c.MenuItemId
+            INNER JOIN InventoryItems i ON i.Id = c.InventoryItemId
+            WHERE c.MenuItemId = @MenuItemId
+            ORDER BY i.Name";
+
+        var result = await connection.QueryAsync<MasterMenuItemComponentView>(sql, new { MenuItemId = menuItemId });
+        return result.ToList();
+    }
+
+    public async Task DeleteMenuItemComponentAsync(Guid id)
+    {
+        using var connection = new SqlConnection(_connectionString);
+        await connection.ExecuteAsync("DELETE FROM MenuItemComponents WHERE Id = @Id", new { Id = id });
     }
 }

@@ -1,0 +1,176 @@
+@page "/configure/menu/{CategoryId:guid}"
+@using RestaurantDashboard.Data.Models
+@using RestaurantDashboard.Data.Services
+@using RestaurantDashboard.Components.Shared
+@inject IMasterDataAdminService AdminService
+@inject NavigationManager Nav
+
+<PageTitle>@(category?.Name ?? "Category")</PageTitle>
+
+@if (loading)
+{
+    <div class="list-page"><p class="list-loading">Loading…</p></div>
+}
+else if (category == null)
+{
+    <div class="list-page">
+        <p>Category not found. <a href="/configure/menu">← Back to categories</a></p>
+    </div>
+}
+else
+{
+    <div class="list-page">
+        <div class="list-breadcrumb">
+            <a href="/configure/menu">Categories</a>
+            <span class="bc-sep">/</span>
+            <span>@category.Name</span>
+        </div>
+
+        <div class="list-page-header">
+            <div>
+                <h1>@category.Name</h1>
+                <p>@items.Count menu item(s) — click one to view details</p>
+            </div>
+            <button class="btn-add" @onclick="OpenAdd">+ Add</button>
+        </div>
+
+        <div class="list-filter">
+            <input type="text" @bind="filter" @bind:event="oninput" placeholder="🔍  Filter items…" />
+        </div>
+
+        <div class="list-table-panel">
+            @foreach (var item in Filtered)
+            {
+                <div class="list-row" @onclick="() => GoToItem(item.Id)">
+                    <div class="list-row-main">
+                        <strong>@item.Name</strong>
+                        @if (!string.IsNullOrWhiteSpace(item.Description))
+                        {
+                            <span class="list-row-sub">@item.Description</span>
+                        }
+                    </div>
+                    <div class="list-row-actions" @onclick:stopPropagation="true">
+                        <span class="price-tag">$@item.Price.ToString("0.00")</span>
+                        <span class="badge @(item.IsActive ? "badge-active" : "badge-inactive")">
+                            @(item.IsActive ? "Active" : "Inactive")
+                        </span>
+                        <button class="btn-icon" title="Edit" @onclick="() => OpenEdit(item)">✏️</button>
+                    </div>
+                </div>
+            }
+            @if (!Filtered.Any())
+            {
+                <div class="list-empty">No menu items found. Add one to get started.</div>
+            }
+        </div>
+    </div>
+
+    <Modal IsVisible="modalOpen" Title="@modalTitle" OnClose="CloseModal">
+        <div class="modal-form">
+            <div>
+                <label>Name</label>
+                <input type="text" @bind="form.Name" placeholder="e.g. Classic Burger" />
+            </div>
+            <div>
+                <label>Description</label>
+                <input type="text" @bind="form.Description" placeholder="Optional" />
+            </div>
+            <div>
+                <label>Price ($)</label>
+                <input type="number" step="0.01" min="0" @bind="form.Price" />
+            </div>
+            <div>
+                <label class="checkbox-label">
+                    <input type="checkbox" @bind="form.IsActive" /> Active
+                </label>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(formError))
+            {
+                <div class="modal-error">@formError</div>
+            }
+            <div class="modal-actions">
+                <button class="btn-primary" @onclick="SaveAsync">Save</button>
+                <button class="btn-secondary" @onclick="CloseModal">Cancel</button>
+            </div>
+        </div>
+    </Modal>
+}
+
+@code {
+    [Parameter] public Guid CategoryId { get; set; }
+
+    private MasterCategory? category;
+    private List<MasterMenuItem> items = new();
+    private MasterMenuItem form = new() { IsActive = true };
+    private string filter = "";
+    private bool modalOpen;
+    private string modalTitle = "";
+    private string formError = "";
+    private bool loading = true;
+
+    private IEnumerable<MasterMenuItem> Filtered =>
+        string.IsNullOrWhiteSpace(filter)
+            ? items
+            : items.Where(m => m.Name.Contains(filter, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        var allCategories = await AdminService.GetCategoriesAsync();
+        category = allCategories.FirstOrDefault(c => c.Id == CategoryId);
+
+        var allItems = await AdminService.GetMenuItemsAsync();
+        items = allItems.Where(m => m.IdCategory == CategoryId).ToList();
+
+        loading = false;
+    }
+
+    private void OpenAdd()
+    {
+        form = new MasterMenuItem { IsActive = true, IdCategory = CategoryId };
+        modalTitle = "Add Menu Item";
+        formError = "";
+        modalOpen = true;
+    }
+
+    private void OpenEdit(MasterMenuItem item)
+    {
+        form = new MasterMenuItem
+        {
+            Id = item.Id,
+            IdCategory = item.IdCategory,
+            Name = item.Name,
+            Description = item.Description,
+            Price = item.Price,
+            IsActive = item.IsActive
+        };
+        modalTitle = "Edit Menu Item";
+        formError = "";
+        modalOpen = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(form.Name))
+        {
+            formError = "Name is required.";
+            return;
+        }
+
+        if (form.Id == Guid.Empty)
+            await AdminService.CreateMenuItemAsync(form);
+        else
+            await AdminService.UpdateMenuItemAsync(form);
+
+        CloseModal();
+        var allItems = await AdminService.GetMenuItemsAsync();
+        items = allItems.Where(m => m.IdCategory == CategoryId).ToList();
+    }
+
+    private void CloseModal()
+    {
+        modalOpen = false;
+        formError = "";
+    }
+
+    private void GoToItem(Guid id) => Nav.NavigateTo("/configure/menu/" + CategoryId + "/" + id);
+}

@@ -128,9 +128,9 @@ namespace RestaurantPOS
 
             Services = services.BuildServiceProvider();
 
-            // Sync master data from server on startup
+            // Sync master data from server on startup (non-blocking to avoid UI deadlocks/startup hangs).
             var masterDataSync = Services.GetRequiredService<IMasterDataSyncService>();
-            _ = masterDataSync.SyncMasterDataAsync(); // Fire and forget - don't block startup
+            _ = masterDataSync.SyncMasterDataAsync();
 
             // Log startup and file location
             var logger = Services.GetRequiredService<ILogger<App>>();

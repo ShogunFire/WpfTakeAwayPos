@@ -20,6 +20,7 @@ IF OBJECT_ID('ExpenseCategories', 'U') IS NOT NULL DROP TABLE ExpenseCategories;
 IF OBJECT_ID('Categories', 'U') IS NOT NULL DROP TABLE Categories;
 IF OBJECT_ID('InventoryItems', 'U') IS NOT NULL DROP TABLE InventoryItems;
 IF OBJECT_ID('ProcessedEvents', 'U') IS NOT NULL DROP TABLE ProcessedEvents;
+IF OBJECT_ID('AppFeatureOptions', 'U') IS NOT NULL DROP TABLE AppFeatureOptions;
 IF OBJECT_ID('Locations', 'U') IS NOT NULL DROP TABLE Locations;
 
 -- ============================================================================
@@ -67,6 +68,16 @@ CREATE TABLE ProcessedEvents (
 CREATE INDEX IX_ProcessedEvents_Status ON ProcessedEvents(Status);
 CREATE INDEX IX_ProcessedEvents_EventCreatedAt ON ProcessedEvents(EventCreatedAt);
 CREATE INDEX IX_ProcessedEvents_ReceivedAt ON ProcessedEvents(ReceivedAt);
+
+CREATE TABLE AppFeatureOptions (
+    Id INT NOT NULL PRIMARY KEY,
+    InventoryModuleEnabled BIT NOT NULL DEFAULT(1),
+    InventoryCostModuleEnabled BIT NOT NULL DEFAULT(1),
+    UpdatedAt DATETIME2 NOT NULL
+);
+
+INSERT INTO AppFeatureOptions (Id, InventoryModuleEnabled, InventoryCostModuleEnabled, UpdatedAt)
+VALUES (1, 1, 1, SYSUTCDATETIME());
 
 CREATE TABLE InventoryItems (
     Id UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,

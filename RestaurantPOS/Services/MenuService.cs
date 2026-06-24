@@ -27,6 +27,7 @@ namespace RestaurantPOS.Services
 
         public List<MenuItem> GetMenuItems()
         {
+            _menuItems = LoadMenuItems();
             return _menuItems;
         }
 

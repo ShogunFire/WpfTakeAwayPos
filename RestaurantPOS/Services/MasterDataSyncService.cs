@@ -31,33 +31,19 @@ namespace RestaurantPOS.Services
         {
             try
             {
-                // Sync categories first (as menu items depend on them)
                 var categories = await FetchCategoriesAsync();
-                if (categories != null && categories.Any())
-                {
-                    SaveCategories(categories);
-                }
-
-                // Sync inventory items
                 var inventoryItems = await FetchInventoryItemsAsync();
-                if (inventoryItems != null && inventoryItems.Any())
-                {
-                    SaveInventoryItems(inventoryItems);
-                }
-
-                // Sync menu items
                 var menuItems = await FetchMenuItemsAsync();
-                if (menuItems != null && menuItems.Any())
+                var components = await FetchMenuItemComponentsAsync();
+
+                // Avoid partial updates that can violate FK constraints and leave stale state.
+                if (categories == null || inventoryItems == null || menuItems == null || components == null)
                 {
-                    SaveMenuItems(menuItems);
+                    Console.WriteLine("Master data sync skipped because one or more endpoints failed.");
+                    return;
                 }
 
-                // Sync menu item components
-                var components = await FetchMenuItemComponentsAsync();
-                if (components != null && components.Any())
-                {
-                    SaveMenuItemComponents(components);
-                }
+                SaveMasterData(categories, inventoryItems, menuItems, components);
             }
             catch (Exception ex)
             {
@@ -128,8 +114,17 @@ namespace RestaurantPOS.Services
 
 
 
-        private void SaveCategories(IEnumerable<CategoryDto> categories)
+        private void SaveMasterData(
+            IEnumerable<CategoryDto> categories,
+            IEnumerable<InventoryItemDto> inventoryItems,
+            IEnumerable<MenuItemDto> menuItems,
+            IEnumerable<MenuItemComponentDto> components)
         {
+            var categoriesList = categories.ToList();
+            var inventoryList = inventoryItems.ToList();
+            var menuItemsList = menuItems.ToList();
+            var componentsList = components.ToList();
+
             using var connection = SqliteDb.CreateConnection();
             connection.Open();
 
@@ -137,173 +132,122 @@ namespace RestaurantPOS.Services
 
             try
             {
-                // Clear existing categories
-                using (var deleteCmd = connection.CreateCommand())
-                {
-                    deleteCmd.CommandText = "DELETE FROM Categories";
-                    deleteCmd.Transaction = transaction;
-                    deleteCmd.ExecuteNonQuery();
-                }
+                DeleteMasterDataTables(connection, transaction);
 
-                // Insert new categories
-                foreach (var category in categories)
-                {
-                    using var insertCmd = connection.CreateCommand();
-                    insertCmd.Transaction = transaction;
-                    insertCmd.CommandText = @"
-                        INSERT INTO Categories (Id, Name, Description, IsActive)
-                        VALUES (@Id, @Name, @Description, @IsActive)";
-                    
-                    insertCmd.Parameters.AddWithValue("@Id", category.Id.ToString());
-                    insertCmd.Parameters.AddWithValue("@Name", category.Name ?? string.Empty);
-                    insertCmd.Parameters.AddWithValue("@Description", category.Description ?? string.Empty);
-                    insertCmd.Parameters.AddWithValue("@IsActive", category.IsActive ? 1 : 0);
-                    
-                    insertCmd.ExecuteNonQuery();
-                }
+                InsertCategories(connection, transaction, categoriesList);
+                InsertInventoryItems(connection, transaction, inventoryList);
+                InsertMenuItems(connection, transaction, menuItemsList);
+                InsertMenuItemComponents(connection, transaction, componentsList);
 
                 transaction.Commit();
-            }
-            catch
-            {
-                transaction.Rollback();
-                throw;
-            }
-        }
-
-        private void SaveInventoryItems(IEnumerable<InventoryItemDto> items)
-        {
-            using var connection = SqliteDb.CreateConnection();
-            connection.Open();
-
-            using var transaction = connection.BeginTransaction();
-
-            try
-            {
-                // Clear existing inventory items
-                using (var deleteCmd = connection.CreateCommand())
-                {
-                    deleteCmd.CommandText = "DELETE FROM InventoryItems";
-                    deleteCmd.Transaction = transaction;
-                    deleteCmd.ExecuteNonQuery();
-                }
-
-                // Insert new inventory items
-                foreach (var item in items)
-                {
-                    using var insertCmd = connection.CreateCommand();
-                    insertCmd.Transaction = transaction;
-                    insertCmd.CommandText = @"
-                        INSERT INTO InventoryItems (Id, Name, Unit, Quantity)
-                        VALUES (@Id, @Name, @Unit, 0)";
-                    
-                    insertCmd.Parameters.AddWithValue("@Id", item.InventoryItemId.ToString());
-                    insertCmd.Parameters.AddWithValue("@Name", item.Name);
-                    insertCmd.Parameters.AddWithValue("@Unit", item.Unit);
-                    
-                    insertCmd.ExecuteNonQuery();
-                }
-
-                transaction.Commit();
-                Console.WriteLine($"Synced {items.Count()} inventory items");
+                Console.WriteLine($"Synced categories={categoriesList.Count}, inventoryItems={inventoryList.Count}, menuItems={menuItemsList.Count}, components={componentsList.Count}");
             }
             catch (Exception ex)
             {
                 transaction.Rollback();
-                Console.WriteLine($"Error saving inventory items: {ex.Message}");
+                Console.WriteLine($"Error saving master data: {ex.Message}");
                 throw;
             }
         }
 
-        private void SaveMenuItems(IEnumerable<MenuItemDto> items)
+        private static void DeleteMasterDataTables(SqliteConnection connection, SqliteTransaction transaction)
         {
-            using var connection = SqliteDb.CreateConnection();
-            connection.Open();
+            // Delete children first to satisfy FK constraints.
+            using var deleteComponentsCmd = connection.CreateCommand();
+            deleteComponentsCmd.Transaction = transaction;
+            deleteComponentsCmd.CommandText = "DELETE FROM MenuItemComponents";
+            deleteComponentsCmd.ExecuteNonQuery();
 
-            using var transaction = connection.BeginTransaction();
+            using var deleteMenuItemsCmd = connection.CreateCommand();
+            deleteMenuItemsCmd.Transaction = transaction;
+            deleteMenuItemsCmd.CommandText = "DELETE FROM MenuItems";
+            deleteMenuItemsCmd.ExecuteNonQuery();
 
-            try
+            using var deleteCategoriesCmd = connection.CreateCommand();
+            deleteCategoriesCmd.Transaction = transaction;
+            deleteCategoriesCmd.CommandText = "DELETE FROM Categories";
+            deleteCategoriesCmd.ExecuteNonQuery();
+
+            using var deleteInventoryCmd = connection.CreateCommand();
+            deleteInventoryCmd.Transaction = transaction;
+            deleteInventoryCmd.CommandText = "DELETE FROM InventoryItems";
+            deleteInventoryCmd.ExecuteNonQuery();
+        }
+
+        private static void InsertCategories(SqliteConnection connection, SqliteTransaction transaction, IEnumerable<CategoryDto> categories)
+        {
+            foreach (var category in categories)
             {
-                // Clear existing menu items
-                using (var deleteCmd = connection.CreateCommand())
-                {
-                    deleteCmd.CommandText = "DELETE FROM MenuItems";
-                    deleteCmd.Transaction = transaction;
-                    deleteCmd.ExecuteNonQuery();
-                }
+                using var insertCmd = connection.CreateCommand();
+                insertCmd.Transaction = transaction;
+                insertCmd.CommandText = @"
+                    INSERT INTO Categories (Id, Name, Description, IsActive)
+                    VALUES (@Id, @Name, @Description, @IsActive)";
 
-                // Insert new menu items
-                foreach (var item in items)
-                {
-                    using var insertCmd = connection.CreateCommand();
-                    insertCmd.Transaction = transaction;
-                    insertCmd.CommandText = @"
-                        INSERT INTO MenuItems (Id, IdCategory, Name, Description, Price, IsActive)
-                        VALUES (@Id, @IdCategory, @Name, @Description, @Price, @IsActive)";
-                    
-                    insertCmd.Parameters.AddWithValue("@Id", item.Id.ToString());
-                    insertCmd.Parameters.AddWithValue("@IdCategory", item.IdCategory.ToString());
-                    insertCmd.Parameters.AddWithValue("@Name", item.Name);
-                    insertCmd.Parameters.AddWithValue("@Description", item.Description ?? string.Empty);
-                    insertCmd.Parameters.AddWithValue("@Price", item.Price);
-                    insertCmd.Parameters.AddWithValue("@IsActive", item.IsActive ? 1 : 0);
-                    
-                    insertCmd.ExecuteNonQuery();
-                }
+                insertCmd.Parameters.AddWithValue("@Id", category.Id.ToString());
+                insertCmd.Parameters.AddWithValue("@Name", category.Name ?? string.Empty);
+                insertCmd.Parameters.AddWithValue("@Description", category.Description ?? string.Empty);
+                insertCmd.Parameters.AddWithValue("@IsActive", category.IsActive ? 1 : 0);
 
-                transaction.Commit();
-                Console.WriteLine($"Synced {items.Count()} menu items");
-            }
-            catch (Exception ex)
-            {
-                transaction.Rollback();
-                Console.WriteLine($"Error saving menu items: {ex.Message}");
-                throw;
+                insertCmd.ExecuteNonQuery();
             }
         }
 
-        private void SaveMenuItemComponents(IEnumerable<MenuItemComponentDto> components)
+        private static void InsertInventoryItems(SqliteConnection connection, SqliteTransaction transaction, IEnumerable<InventoryItemDto> items)
         {
-            using var connection = SqliteDb.CreateConnection();
-            connection.Open();
-
-            using var transaction = connection.BeginTransaction();
-
-            try
+            foreach (var item in items)
             {
-                // Clear existing components
-                using (var deleteCmd = connection.CreateCommand())
-                {
-                    deleteCmd.CommandText = "DELETE FROM MenuItemComponents";
-                    deleteCmd.Transaction = transaction;
-                    deleteCmd.ExecuteNonQuery();
-                }
+                using var insertCmd = connection.CreateCommand();
+                insertCmd.Transaction = transaction;
+                insertCmd.CommandText = @"
+                    INSERT INTO InventoryItems (Id, Name, Unit, Quantity)
+                    VALUES (@Id, @Name, @Unit, 0)";
 
-                // Insert new components
-                foreach (var component in components)
-                {
-                    using var insertCmd = connection.CreateCommand();
-                    insertCmd.Transaction = transaction;
-                    insertCmd.CommandText = @"
-                        INSERT INTO MenuItemComponents (Id, MenuItemId, InventoryItemId, Quantity)
-                        VALUES (@Id, @MenuItemId, @InventoryItemId, @Quantity)";
-                    
-                    insertCmd.Parameters.AddWithValue("@Id", component.Id.ToString());
-                    insertCmd.Parameters.AddWithValue("@MenuItemId", component.MenuItemId.ToString());
-                    insertCmd.Parameters.AddWithValue("@InventoryItemId", component.InventoryItemId.ToString());
-                    insertCmd.Parameters.AddWithValue("@Quantity", component.Quantity);
-                    
-                    insertCmd.ExecuteNonQuery();
-                }
+                insertCmd.Parameters.AddWithValue("@Id", item.InventoryItemId.ToString());
+                insertCmd.Parameters.AddWithValue("@Name", item.Name);
+                insertCmd.Parameters.AddWithValue("@Unit", item.Unit);
 
-                transaction.Commit();
-                Console.WriteLine($"Synced {components.Count()} menu item components");
+                insertCmd.ExecuteNonQuery();
             }
-            catch (Exception ex)
+        }
+
+        private static void InsertMenuItems(SqliteConnection connection, SqliteTransaction transaction, IEnumerable<MenuItemDto> items)
+        {
+            foreach (var item in items)
             {
-                transaction.Rollback();
-                Console.WriteLine($"Error saving menu item components: {ex.Message}");
-                throw;
+                using var insertCmd = connection.CreateCommand();
+                insertCmd.Transaction = transaction;
+                insertCmd.CommandText = @"
+                    INSERT INTO MenuItems (Id, IdCategory, Name, Description, Price, IsActive)
+                    VALUES (@Id, @IdCategory, @Name, @Description, @Price, @IsActive)";
+
+                insertCmd.Parameters.AddWithValue("@Id", item.Id.ToString());
+                insertCmd.Parameters.AddWithValue("@IdCategory", item.IdCategory.ToString());
+                insertCmd.Parameters.AddWithValue("@Name", item.Name);
+                insertCmd.Parameters.AddWithValue("@Description", item.Description ?? string.Empty);
+                insertCmd.Parameters.AddWithValue("@Price", item.Price);
+                insertCmd.Parameters.AddWithValue("@IsActive", item.IsActive ? 1 : 0);
+
+                insertCmd.ExecuteNonQuery();
+            }
+        }
+
+        private static void InsertMenuItemComponents(SqliteConnection connection, SqliteTransaction transaction, IEnumerable<MenuItemComponentDto> components)
+        {
+            foreach (var component in components)
+            {
+                using var insertCmd = connection.CreateCommand();
+                insertCmd.Transaction = transaction;
+                insertCmd.CommandText = @"
+                    INSERT INTO MenuItemComponents (Id, MenuItemId, InventoryItemId, Quantity)
+                    VALUES (@Id, @MenuItemId, @InventoryItemId, @Quantity)";
+
+                insertCmd.Parameters.AddWithValue("@Id", component.Id.ToString());
+                insertCmd.Parameters.AddWithValue("@MenuItemId", component.MenuItemId.ToString());
+                insertCmd.Parameters.AddWithValue("@InventoryItemId", component.InventoryItemId.ToString());
+                insertCmd.Parameters.AddWithValue("@Quantity", component.Quantity);
+
+                insertCmd.ExecuteNonQuery();
             }
         }
 

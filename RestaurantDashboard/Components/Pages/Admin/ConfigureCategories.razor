@@ -1,0 +1,140 @@
+@page "/configure/categories"
+@using RestaurantDashboard.Data.Models
+@using RestaurantDashboard.Data.Services
+@inject IMasterDataAdminService AdminService
+
+<PageTitle>Categories</PageTitle>
+
+<div class="admin-page">
+    <div class="admin-page-header">
+        <h1>Categories</h1>
+        <p>Manage product categories. Categories group menu items in the POS and are synced on startup.</p>
+    </div>
+
+    <div class="admin-form-panel">
+        <h3>@(form.Id == Guid.Empty ? "Add Category" : "Edit Category")</h3>
+
+        <div class="form-row">
+            <label>Name</label>
+            <input type="text" @bind="form.Name" placeholder="e.g. Burgers" />
+        </div>
+        <div class="form-row">
+            <label>Description</label>
+            <input type="text" @bind="form.Description" placeholder="Optional description" />
+        </div>
+        <div class="form-row">
+            <label>Active</label>
+            <input type="checkbox" @bind="form.IsActive" />
+        </div>
+
+        <div class="form-actions">
+            <button class="btn-primary" @onclick="SaveAsync">
+                @(form.Id == Guid.Empty ? "Add Category" : "Save Changes")
+            </button>
+            @if (form.Id != Guid.Empty)
+            {
+                <button class="btn-secondary" @onclick="Reset">Cancel</button>
+            }
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(statusMessage))
+        {
+            <div class="status-message">@statusMessage</div>
+        }
+    </div>
+
+    <div class="admin-table-panel">
+        @if (items.Count == 0 && !loading)
+        {
+            <div style="padding: 32px; text-align: center; color: #94a3b8;">No categories yet. Add one above.</div>
+        }
+        else
+        {
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in items.OrderBy(c => c.Name))
+                    {
+                        <tr class="@(item.Id == form.Id ? "row-editing" : "")">
+                            <td><strong>@item.Name</strong></td>
+                            <td>@item.Description</td>
+                            <td>
+                                <span class="badge @(item.IsActive ? "badge-active" : "badge-inactive")">
+                                    @(item.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </td>
+                            <td><button class="btn-edit" @onclick="() => Edit(item)">Edit</button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@code {
+    private List<MasterCategory> items = new();
+    private MasterCategory form = new() { IsActive = true };
+    private string statusMessage = string.Empty;
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        items = await AdminService.GetCategoriesAsync();
+        loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(form.Name))
+        {
+            statusMessage = "Name is required.";
+            return;
+        }
+
+        if (form.Id == Guid.Empty)
+        {
+            await AdminService.CreateCategoryAsync(form);
+            statusMessage = "Category created.";
+        }
+        else
+        {
+            await AdminService.UpdateCategoryAsync(form);
+            statusMessage = "Category updated.";
+        }
+
+        Reset();
+        await LoadAsync();
+    }
+
+    private void Edit(MasterCategory item)
+    {
+        form = new MasterCategory
+        {
+            Id = item.Id,
+            Name = item.Name,
+            Description = item.Description,
+            IsActive = item.IsActive
+        };
+        statusMessage = string.Empty;
+    }
+
+    private void Reset()
+    {
+        form = new MasterCategory { IsActive = true };
+        statusMessage = string.Empty;
+    }
+}

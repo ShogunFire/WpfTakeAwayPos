@@ -68,6 +68,7 @@ builder.Services.AddScoped(sp => new ShiftRepository(connectionString));
 builder.Services.AddScoped(sp => new ExpenseRepository(connectionString));
 builder.Services.AddScoped(sp => new ExpenseCategoryRepository(connectionString));
 builder.Services.AddScoped(sp => new MenuItemGrossProfitHistoryRepository(connectionString));
+builder.Services.AddScoped(sp => new FeatureOptionsRepository(connectionString));
 
 // Register repository interfaces
 builder.Services.AddScoped<IProcessedEventRepository>(sp => sp.GetRequiredService<ProcessedEventRepository>());
@@ -86,6 +87,7 @@ builder.Services.AddScoped<IShiftRepository>(sp => sp.GetRequiredService<ShiftRe
 builder.Services.AddScoped<IExpenseRepository>(sp => sp.GetRequiredService<ExpenseRepository>());
 builder.Services.AddScoped<IExpenseCategoryRepository>(sp => sp.GetRequiredService<ExpenseCategoryRepository>());
 builder.Services.AddScoped<IMenuItemGrossProfitHistoryRepository>(sp => sp.GetRequiredService<MenuItemGrossProfitHistoryRepository>());
+builder.Services.AddScoped<IFeatureOptionsRepository>(sp => sp.GetRequiredService<FeatureOptionsRepository>());
 
 // Register event handlers
 builder.Services.AddScoped<IMenuItemCostService, MenuItemCostService>();

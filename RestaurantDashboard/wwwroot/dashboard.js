@@ -104,3 +104,16 @@ window.initTopItemsChart = function(labels, data) {
         }
     });
 };
+
+window.openDatePicker = function(element) {
+    if (!element) {
+        return;
+    }
+
+    if (typeof element.showPicker === 'function') {
+        element.showPicker();
+        return;
+    }
+
+    element.focus();
+};

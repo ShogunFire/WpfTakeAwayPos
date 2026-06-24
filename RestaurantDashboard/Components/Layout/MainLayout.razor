@@ -1,17 +1,8 @@
 ﻿@inherits LayoutComponentBase
 
 <div class="app-layout">
-    <aside class="sidebar">
-        <NavMenu />
-    </aside>
-
-    <main>
-        <header class="topbar">
-            <span>Admin</span>
-        </header>
-
-        <section class="content">
-            @Body
-        </section>
+    <TopNav />
+    <main class="app-content">
+        @Body
     </main>
 </div>

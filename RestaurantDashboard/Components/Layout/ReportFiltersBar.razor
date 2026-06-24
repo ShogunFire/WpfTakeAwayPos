@@ -1,0 +1,70 @@
+@using RestaurantDashboard.Data.Models
+@using RestaurantDashboard.Data.Services
+@inject AnalyticsService Analytics
+@inject ReportFilterState ReportFilters
+@inject NavigationManager Navigation
+@implements IDisposable
+
+@if (IsReportPage)
+{
+    <div class="report-filters-bar">
+        <div class="report-filters-inner">
+            <div class="filter-group">
+                <label>Location</label>
+                <select @bind="ReportFilters.SelectedLocationId" @bind:after="OnFilterChangedAsync">
+                    <option value="">All Locations</option>
+                    @foreach (var location in locations)
+                    {
+                        <option value="@location.Id">@location.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>From</label>
+                <input type="date" @bind="ReportFilters.StartDate" @bind:after="OnFilterChangedAsync" />
+            </div>
+
+            <div class="filter-group">
+                <label>To</label>
+                <input type="date" @bind="ReportFilters.EndDate" @bind:after="OnFilterChangedAsync" />
+            </div>
+
+            <button class="btn-primary" @onclick="OnFilterChangedAsync">Refresh</button>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Location> locations = new();
+
+    private bool IsReportPage
+    {
+        get
+        {
+            var path = "/" + Navigation.ToBaseRelativePath(Navigation.Uri).Trim('/').ToLowerInvariant();
+            return path == "/overview" || path == "/sales" || path == "/menu-performance" || path == "/inventory";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        locations = await Analytics.GetLocationsAsync();
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private async Task OnFilterChangedAsync()
+    {
+        await ReportFilters.NotifyFiltersChangedAsync();
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}

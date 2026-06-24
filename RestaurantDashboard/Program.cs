@@ -11,9 +11,14 @@ builder.Services.AddRazorComponents()
 // Register specialized analytics services
 builder.Services.AddScoped<ISalesAnalyticsService, SalesAnalyticsService>();
 builder.Services.AddScoped<IMenuItemAnalyticsService, MenuItemAnalyticsService>();
-builder.Services.AddScoped<IInventoryAnalyticsService, InventoryAnalyticsService>();
+builder.Services.AddScoped<InventoryAnalyticsService>();
+builder.Services.AddScoped<NoopInventoryAnalyticsService>();
+builder.Services.AddScoped<IInventoryAnalyticsService, FeatureAwareInventoryAnalyticsService>();
 builder.Services.AddScoped<ILocationAnalyticsService, LocationAnalyticsService>();
 builder.Services.AddScoped<IMasterDataAdminService, MasterDataAdminService>();
+builder.Services.AddScoped<ReportFilterState>();
+builder.Services.AddScoped<IFeatureOptionsService, SqlFeatureOptionsService>();
+builder.Services.AddScoped<FeatureOptionsState>();
 
 // Register main Analytics Service facade
 builder.Services.AddScoped<AnalyticsService>();

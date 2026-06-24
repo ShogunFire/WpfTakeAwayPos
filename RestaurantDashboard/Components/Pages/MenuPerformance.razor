@@ -2,28 +2,23 @@
 @using RestaurantDashboard.Data.Models
 @using RestaurantDashboard.Data.Services
 @inject AnalyticsService Analytics
+@inject ReportFilterState ReportFilters
+@inject FeatureOptionsState FeatureState
 @rendermode InteractiveServer
+@implements IDisposable
 
 <div class="dashboard-container">
     <div class="dashboard-header">
         <h1>Menu Performance</h1>
         <div class="filters">
-            <select @bind="selectedLocationId" @bind:after="LoadDataAsync">
-                <option value="">All Locations</option>
-                @foreach (var location in locations)
-                {
-                    <option value="@location.Id">@location.Name</option>
-                }
-            </select>
-            <input type="date" @bind="startDate" @bind:after="LoadDataAsync" />
-            <span>to</span>
-            <input type="date" @bind="endDate" @bind:after="LoadDataAsync" />
             <select @bind="sortBy" @bind:after="SortData">
                 <option value="revenue">Sort by Revenue</option>
                 <option value="quantity">Sort by Quantity</option>
-                <option value="profit">Sort by Profit Margin</option>
+                @if (FeatureState.Current.InventoryCostModuleEnabled)
+                {
+                    <option value="profit">Sort by Profit Margin</option>
+                }
             </select>
-            <button class="btn-primary" @onclick="LoadDataAsync">Refresh</button>
         </div>
     </div>
 
@@ -105,10 +100,9 @@
                                 var points = menuItemTrend.OrderBy(d => d.Period).ToList();
                                 if (points.Any())
                                 {
-                                    var maxValue = Math.Max(
-                                        Math.Max(points.Max(p => p.Price), points.Max(p => p.Cost)),
-                                        points.Max(p => p.Profit)
-                                    );
+                                    var maxValue = FeatureState.Current.InventoryCostModuleEnabled
+                                        ? Math.Max(Math.Max(points.Max(p => p.Price), points.Max(p => p.Cost)), points.Max(p => p.Profit))
+                                        : points.Max(p => p.Price);
                                     var padding = 60;
                                     var chartWidth = 1200 - (padding * 2);
                                     var chartHeight = 400 - (padding * 2);
@@ -126,11 +120,14 @@
                                     <polyline class="line revenue" points="@string.Join(" ", points.Select((p, i) =>
                                         $"{padding + (i * pointSpacing)},{padding + chartHeight - (p.Price * yScale)}"))"/>
 
-                                    <polyline class="line cost" points="@string.Join(" ", points.Select((p, i) =>
-                                        $"{padding + (i * pointSpacing)},{padding + chartHeight - (p.Cost * yScale)}"))"/>
+                                    @if (FeatureState.Current.InventoryCostModuleEnabled)
+                                    {
+                                        <polyline class="line cost" points="@string.Join(" ", points.Select((p, i) =>
+                                            $"{padding + (i * pointSpacing)},{padding + chartHeight - (p.Cost * yScale)}"))"/>
 
-                                    <polyline class="line profit" points="@string.Join(" ", points.Select((p, i) =>
-                                        $"{padding + (i * pointSpacing)},{padding + chartHeight - (p.Profit * yScale)}"))"/>
+                                        <polyline class="line profit" points="@string.Join(" ", points.Select((p, i) =>
+                                            $"{padding + (i * pointSpacing)},{padding + chartHeight - (p.Profit * yScale)}"))"/>
+                                    }
 
                                     @foreach (var (p, i) in points.Select((p, i) => (p, i)))
                                     {
@@ -139,18 +136,21 @@
                                         <circle class="point revenue" cx="@x" cy="@y" r="4"/>
                                     }
 
-                                    @foreach (var (p, i) in points.Select((p, i) => (p, i)))
+                                    @if (FeatureState.Current.InventoryCostModuleEnabled)
                                     {
-                                        var x = padding + (i * pointSpacing);
-                                        var y = padding + chartHeight - (p.Cost * yScale);
-                                        <circle class="point cost" cx="@x" cy="@y" r="4"/>
-                                    }
+                                        @foreach (var (p, i) in points.Select((p, i) => (p, i)))
+                                        {
+                                            var x = padding + (i * pointSpacing);
+                                            var y = padding + chartHeight - (p.Cost * yScale);
+                                            <circle class="point cost" cx="@x" cy="@y" r="4"/>
+                                        }
 
-                                    @foreach (var (p, i) in points.Select((p, i) => (p, i)))
-                                    {
-                                        var x = padding + (i * pointSpacing);
-                                        var y = padding + chartHeight - (p.Profit * yScale);
-                                        <circle class="point profit" cx="@x" cy="@y" r="4"/>
+                                        @foreach (var (p, i) in points.Select((p, i) => (p, i)))
+                                        {
+                                            var x = padding + (i * pointSpacing);
+                                            var y = padding + chartHeight - (p.Profit * yScale);
+                                            <circle class="point profit" cx="@x" cy="@y" r="4"/>
+                                        }
                                     }
 
                                     <line x1="@padding" y1="@padding" x2="@padding" y2="@(400 - padding)" stroke="#333" stroke-width="2"/>
@@ -172,14 +172,17 @@
                             <span class="legend-color revenue"></span>
                             <span>Price</span>
                         </div>
-                        <div class="legend-item">
-                            <span class="legend-color cost"></span>
-                            <span>Cost</span>
-                        </div>
-                        <div class="legend-item">
-                            <span class="legend-color profit"></span>
-                            <span>Profit</span>
-                        </div>
+                        @if (FeatureState.Current.InventoryCostModuleEnabled)
+                        {
+                            <div class="legend-item">
+                                <span class="legend-color cost"></span>
+                                <span>Cost</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color profit"></span>
+                                <span>Profit</span>
+                            </div>
+                        }
                     </div>
                 }
                 else
@@ -198,8 +201,11 @@
                                 <th>Quantity Sold</th>
                                 <th>Total Revenue</th>
                                 <th>Avg Price</th>
-                                <th>Avg Cost</th>
-                                <th>Profit Margin</th>
+                                @if (FeatureState.Current.InventoryCostModuleEnabled)
+                                {
+                                    <th>Avg Cost</th>
+                                    <th>Profit Margin</th>
+                                }
                                 <th>Revenue %</th>
                             </tr>
                         </thead>
@@ -212,10 +218,13 @@
                                     <td>@item.TotalQuantity.ToString("N0")</td>
                                     <td>$@item.TotalRevenue.ToString("N2")</td>
                                     <td>$@item.AveragePrice.ToString("N2")</td>
-                                    <td>$@item.AverageCost.ToString("N2")</td>
-                                    <td class="@(item.ProfitMargin >= 0 ? "positive" : "negative")">
-                                        @item.ProfitMargin.ToString("N1")%
-                                    </td>
+                                    @if (FeatureState.Current.InventoryCostModuleEnabled)
+                                    {
+                                        <td>$@item.AverageCost.ToString("N2")</td>
+                                        <td class="@(item.ProfitMargin >= 0 ? "positive" : "negative")">
+                                            @item.ProfitMargin.ToString("N1")%
+                                        </td>
+                                    }
                                     <td>
                                         <div class="progress-bar">
                                             <div class="progress-fill" style="width: @revenuePercent%"></div>
@@ -610,10 +619,6 @@
 </style>
 
 @code {
-    private List<Location> locations = new();
-    private string selectedLocationId = "";
-    private DateTime startDate = DateTime.Today.AddDays(-30);
-    private DateTime endDate = DateTime.Today.AddDays(1);
     private string sortBy = "revenue";
     private string trendInterval = "day";
     private bool isLoading = false;
@@ -629,7 +634,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        locations = await Analytics.GetLocationsAsync();
+        await FeatureState.EnsureLoadedAsync();
+        ReportFilters.FiltersChanged += LoadDataAsync;
         await LoadDataAsync();
     }
 
@@ -640,8 +646,8 @@
 
         try
         {
-            var locationId = string.IsNullOrEmpty(selectedLocationId) ? (Guid?)null : Guid.Parse(selectedLocationId);
-            menuData = await Analytics.GetMenuItemPerformanceAsync(startDate, endDate, locationId);
+            var locationId = string.IsNullOrEmpty(ReportFilters.SelectedLocationId) ? (Guid?)null : Guid.Parse(ReportFilters.SelectedLocationId);
+            menuData = await Analytics.GetMenuItemPerformanceAsync(ReportFilters.StartDate, ReportFilters.EndDate, locationId);
             
             totalRevenue = menuData.Sum(m => m.TotalRevenue);
             totalQuantity = menuData.Sum(m => m.TotalQuantity);
@@ -649,7 +655,7 @@
             
             SortData();
 
-            menuItems = await Analytics.GetMenuItemsForPeriodAsync(startDate, endDate, locationId);
+            menuItems = await Analytics.GetMenuItemsForPeriodAsync(ReportFilters.StartDate, ReportFilters.EndDate, locationId);
             if (menuItems.Any())
             {
                 if (string.IsNullOrEmpty(selectedMenuItemId) || !menuItems.Any(m => m.MenuItemId.ToString() == selectedMenuItemId))
@@ -680,9 +686,9 @@
             return;
         }
 
-        var locationId = string.IsNullOrEmpty(selectedLocationId) ? (Guid?)null : Guid.Parse(selectedLocationId);
+        var locationId = string.IsNullOrEmpty(ReportFilters.SelectedLocationId) ? (Guid?)null : Guid.Parse(ReportFilters.SelectedLocationId);
         var menuItemId = Guid.Parse(selectedMenuItemId);
-        menuItemTrend = await Analytics.GetMenuItemTrendAsync(startDate, endDate, menuItemId, locationId, trendInterval);
+        menuItemTrend = await Analytics.GetMenuItemTrendAsync(ReportFilters.StartDate, ReportFilters.EndDate, menuItemId, locationId, trendInterval);
         StateHasChanged();
     }
 
@@ -709,5 +715,10 @@
             };
         }
         return period;
+    }
+
+    public void Dispose()
+    {
+        ReportFilters.FiltersChanged -= LoadDataAsync;
     }
 }

@@ -2,30 +2,34 @@
 @using RestaurantDashboard.Data.Models
 @using RestaurantDashboard.Data.Services
 @inject AnalyticsService Analytics
+@inject ReportFilterState ReportFilters
+@inject FeatureOptionsState FeatureState
 @rendermode InteractiveServer
+@implements IDisposable
 
 <div class="dashboard-container">
-    <div class="dashboard-header">
-        <h1>Inventory Dashboard</h1>
-        <div class="filters">
-            <select @bind="selectedLocationId" @bind:after="LoadDataAsync">
-                <option value="">All Locations</option>
-                @foreach (var location in locations)
-                {
-                    <option value="@location.Id">@location.Name</option>
-                }
-            </select>
-            <input type="text" @bind="searchText" @bind:after="FilterInventory" placeholder="Search items..." class="search-input" />
-            <button class="btn-primary" @onclick="LoadDataAsync">Refresh</button>
-        </div>
-    </div>
-
-    @if (isLoading)
+    @if (FeatureState.IsLoaded && !FeatureState.Current.InventoryModuleEnabled)
     {
-        <div class="loading">Loading...</div>
+        <div class="detail-section">
+            <h2>Inventory dashboard is disabled</h2>
+            <p>Enable the Inventory module in Feature Options to view this dashboard.</p>
+        </div>
     }
     else
     {
+        <div class="dashboard-header">
+            <h1>Inventory Dashboard</h1>
+            <div class="filters">
+                <input type="text" @bind="searchText" @bind:after="FilterInventory" placeholder="Search items..." class="search-input" />
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="loading">Loading...</div>
+        }
+        else
+        {
         <div class="metrics-grid">
             <div class="metric-card">
                 <div class="metric-label">Total Items</div>
@@ -97,6 +101,7 @@
         else
         {
             <div class="no-data">No inventory data found.</div>
+        }
         }
     }
 </div>
@@ -318,8 +323,6 @@
 </style>
 
 @code {
-    private List<Location> locations = new();
-    private string selectedLocationId = "";
     private string searchText = "";
     private bool isLoading = false;
     
@@ -331,7 +334,14 @@
 
     protected override async Task OnInitializedAsync()
     {
-        locations = await Analytics.GetLocationsAsync();
+        await FeatureState.EnsureLoadedAsync();
+        ReportFilters.FiltersChanged += LoadDataAsync;
+
+        if (!FeatureState.Current.InventoryModuleEnabled)
+        {
+            return;
+        }
+
         await LoadDataAsync();
     }
 
@@ -342,7 +352,7 @@
 
         try
         {
-            var locationId = string.IsNullOrEmpty(selectedLocationId) ? (Guid?)null : Guid.Parse(selectedLocationId);
+            var locationId = string.IsNullOrEmpty(ReportFilters.SelectedLocationId) ? (Guid?)null : Guid.Parse(ReportFilters.SelectedLocationId);
             inventoryData = await Analytics.GetInventoryStatusAsync(locationId);
             FilterInventory();
             CalculateStats();
@@ -375,5 +385,10 @@
         if (quantity <= 0) return ("Out of Stock", "out-of-stock");
         if (quantity < 10) return ("Low Stock", "low-stock");
         return ("In Stock", "in-stock");
+    }
+
+    public void Dispose()
+    {
+        ReportFilters.FiltersChanged -= LoadDataAsync;
     }
 }

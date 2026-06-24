@@ -1,0 +1,160 @@
+@using Microsoft.AspNetCore.Components.Routing
+@using System.Globalization
+@using RestaurantDashboard.Data.Models
+@using RestaurantDashboard.Data.Services
+@inject AnalyticsService Analytics
+@inject ReportFilterState ReportFilters
+@inject FeatureOptionsState FeatureState
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<nav class="topnav">
+    <a href="/" class="topnav-brand">
+        <i class="fas fa-utensils"></i>
+        <span>Restaurant</span>
+    </a>
+
+    <div class="topnav-groups">
+        <div class="nav-group">
+            <span class="nav-group-label">📊 Analytics <span class="nav-arrow">▾</span></span>
+            <div class="nav-dropdown">
+                <NavLink href="/overview" class="dropdown-item" Match="NavLinkMatch.All">Overview</NavLink>
+                <NavLink href="/sales" class="dropdown-item">Sales</NavLink>
+                <NavLink href="/menu-performance" class="dropdown-item">Menu Performance</NavLink>
+                @if (FeatureState.Current.InventoryModuleEnabled)
+                {
+                    <NavLink href="/inventory" class="dropdown-item">Inventory Dashboard</NavLink>
+                }
+            </div>
+        </div>
+
+        <div class="nav-group">
+            <span class="nav-group-label">🍽️ MenuItems <span class="nav-arrow">▾</span></span>
+            <div class="nav-dropdown">
+                <NavLink href="/configure/menu" class="dropdown-item">Categories</NavLink>
+                <NavLink href="/configure/menu-items" class="dropdown-item">MenuItems</NavLink>
+                @if (FeatureState.Current.InventoryModuleEnabled)
+                {
+                    <NavLink href="/configure/ingredients" class="dropdown-item">Ingredients</NavLink>
+                }
+            </div>
+        </div>
+
+        <div class="nav-group">
+            <span class="nav-group-label">⚙️ Parameters <span class="nav-arrow">▾</span></span>
+            <div class="nav-dropdown">
+                <NavLink href="/configure/features" class="dropdown-item">Feature Options</NavLink>
+            </div>
+        </div>
+    </div>
+
+    @if (FeatureState.IsLoaded && IsReportPage)
+    {
+        <div class="topnav-report-filters">
+            <select @bind="ReportFilters.SelectedLocationId" @bind:after="ApplyFiltersAsync" aria-label="Filter by location">
+                <option value="">All Locations</option>
+                @foreach (var location in locations)
+                {
+                    <option value="@location.Id">@location.Name</option>
+                }
+            </select>
+            <input type="date" value="@StartDateText" @onchange="OnStartDateChanged" aria-label="Start date" />
+            <input type="date" value="@EndDateText" @onchange="OnEndDateChanged" aria-label="End date" />
+        </div>
+    }
+</nav>
+
+@code {
+    private List<Location> locations = new();
+
+    private string StartDateText => ReportFilters.StartDate.ToString("yyyy-MM-dd");
+    private string EndDateText => ReportFilters.EndDate.ToString("yyyy-MM-dd");
+
+    private bool IsReportPage
+    {
+        get
+        {
+            var path = "/" + Navigation.ToBaseRelativePath(Navigation.Uri).Trim('/').ToLowerInvariant();
+            return path == "/overview"
+                || path == "/sales"
+                || path == "/menu-performance"
+                || (FeatureState.Current.InventoryModuleEnabled && path == "/inventory");
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FeatureState.EnsureLoadedAsync();
+        locations = await Analytics.GetLocationsAsync();
+        Navigation.LocationChanged += OnLocationChanged;
+        FeatureState.Changed += OnFeaturesChanged;
+    }
+
+    private async Task ApplyFiltersAsync()
+    {
+        if (ReportFilters.StartDate > ReportFilters.EndDate)
+        {
+            ReportFilters.EndDate = ReportFilters.StartDate;
+        }
+
+        await ReportFilters.NotifyFiltersChangedAsync();
+    }
+
+    private async Task OnStartDateChanged(ChangeEventArgs args)
+    {
+        if (!TryParseDate(args.Value?.ToString(), out var parsedDate))
+        {
+            return;
+        }
+
+        ReportFilters.StartDate = parsedDate;
+        if (ReportFilters.EndDate < ReportFilters.StartDate)
+        {
+            ReportFilters.EndDate = ReportFilters.StartDate;
+        }
+
+        await ReportFilters.NotifyFiltersChangedAsync();
+    }
+
+    private async Task OnEndDateChanged(ChangeEventArgs args)
+    {
+        if (!TryParseDate(args.Value?.ToString(), out var parsedDate))
+        {
+            return;
+        }
+
+        ReportFilters.EndDate = parsedDate;
+        if (ReportFilters.EndDate < ReportFilters.StartDate)
+        {
+            ReportFilters.StartDate = ReportFilters.EndDate;
+        }
+
+        await ReportFilters.NotifyFiltersChangedAsync();
+    }
+
+    private static bool TryParseDate(string? value, out DateTime parsedDate)
+    {
+        return DateTime.TryParseExact(
+            value,
+            "yyyy-MM-dd",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out parsedDate);
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnFeaturesChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+        FeatureState.Changed -= OnFeaturesChanged;
+    }
+}

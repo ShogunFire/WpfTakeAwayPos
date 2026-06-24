@@ -1,0 +1,315 @@
+@page "/configure/menu/{CategoryId:guid}/{ItemId:guid}"
+@using RestaurantDashboard.Data.Models
+@using RestaurantDashboard.Data.Services
+@using RestaurantDashboard.Components.Shared
+@inject IMasterDataAdminService AdminService
+@inject IJSRuntime JS
+
+<PageTitle>@(menuItem?.Name ?? "Menu Item")</PageTitle>
+
+@if (loading)
+{
+    <div class="list-page"><p class="list-loading">Loading…</p></div>
+}
+else if (menuItem == null)
+{
+    <div class="list-page">
+        <p>Menu item not found. <a href="/configure/menu/@CategoryId">← Back</a></p>
+    </div>
+}
+else
+{
+    <div class="list-page">
+        <div class="list-breadcrumb">
+            <a href="/configure/menu">Categories</a>
+            <span class="bc-sep">/</span>
+            <a href="/configure/menu/@CategoryId">@categoryName</a>
+            <span class="bc-sep">/</span>
+            <span>@menuItem.Name</span>
+        </div>
+
+        <!-- ── Item detail card ── -->
+        <div class="detail-section">
+            <div class="detail-section-header">
+                <h1>@menuItem.Name</h1>
+                @if (!editMode)
+                {
+                    <button class="btn-icon" @onclick="StartEdit">✏️ Edit</button>
+                }
+            </div>
+
+            @if (editMode)
+            {
+                <div class="detail-grid">
+                    <span class="detail-label">Name</span>
+                    <input type="text" @bind="editForm.Name" />
+
+                    <span class="detail-label">Description</span>
+                    <input type="text" @bind="editForm.Description" placeholder="Optional" />
+
+                    <span class="detail-label">Price ($)</span>
+                    <input type="number" step="0.01" min="0" @bind="editForm.Price" />
+
+                    <span class="detail-label">Status</span>
+                    <label class="checkbox-label" style="margin:0">
+                        <input type="checkbox" @bind="editForm.IsActive" /> Active
+                    </label>
+
+                    <span></span>
+                    <div class="detail-edit-actions">
+                        <button class="btn-primary" @onclick="SaveItemAsync">Save Changes</button>
+                        <button class="btn-secondary" @onclick="CancelEdit">Cancel</button>
+                        @if (!string.IsNullOrWhiteSpace(editError))
+                        {
+                            <span class="detail-edit-error">@editError</span>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="detail-grid">
+                    <span class="detail-label">Description</span>
+                    <span class="detail-value">@(string.IsNullOrWhiteSpace(menuItem.Description) ? "—" : menuItem.Description)</span>
+
+                    <span class="detail-label">Price</span>
+                    <span class="detail-value price-tag">$@menuItem.Price.ToString("0.00")</span>
+
+                    <span class="detail-label">Status</span>
+                    <span>
+                        <span class="badge @(menuItem.IsActive ? "badge-active" : "badge-inactive")">
+                            @(menuItem.IsActive ? "Active" : "Inactive")
+                        </span>
+                    </span>
+                </div>
+            }
+        </div>
+
+        <!-- ── Ingredients sub-list ── -->
+        <div class="list-page-header">
+            <h2>Ingredients</h2>
+            <button class="btn-add" @onclick="OpenAddIngredient">+ Add</button>
+        </div>
+
+        <div class="list-filter">
+            <input type="text" @bind="ingredientFilter" @bind:event="oninput" placeholder="🔍  Filter ingredients…" />
+        </div>
+
+        <div class="list-table-panel">
+            @foreach (var comp in FilteredComponents)
+            {
+                <div class="list-row list-row-static">
+                    <div class="list-row-main">
+                        <strong>@comp.InventoryItemName</strong>
+                        <span class="list-row-sub">@comp.Quantity.ToString("0.####") @GetUnit(comp.InventoryItemId)</span>
+                    </div>
+                    <div class="list-row-actions">
+                        <button class="btn-icon" title="Edit quantity" @onclick="() => OpenEditIngredient(comp)">✏️</button>
+                        <button class="btn-icon btn-icon-danger" title="Remove" @onclick="() => RemoveIngredientAsync(comp)">🗑️</button>
+                    </div>
+                </div>
+            }
+            @if (!FilteredComponents.Any())
+            {
+                <div class="list-empty">No ingredients in this recipe yet.</div>
+            }
+        </div>
+    </div>
+
+    <!-- ── Ingredient modal ── -->
+    <Modal IsVisible="ingredientModalOpen" Title="@ingredientModalTitle" OnClose="CloseIngredientModal">
+        <div class="modal-form">
+            @if (componentForm.Id == Guid.Empty)
+            {
+                <div>
+                    <label>Ingredient</label>
+                    <select @bind="componentForm.InventoryItemId">
+                        <option value="@Guid.Empty">— Select ingredient —</option>
+                        @foreach (var ing in availableIngredients)
+                        {
+                            <option value="@ing.Id">@ing.Name (@ing.Unit)</option>
+                        }
+                    </select>
+                </div>
+            }
+            else
+            {
+                <div>
+                    <label>Ingredient</label>
+                    <p class="modal-readonly-value">@GetIngredientName(componentForm.InventoryItemId)</p>
+                </div>
+            }
+            <div>
+                <label>Quantity (@GetUnit(componentForm.InventoryItemId))</label>
+                <input type="number" step="0.0001" min="0.0001" @bind="componentForm.Quantity" />
+            </div>
+            @if (!string.IsNullOrWhiteSpace(ingredientError))
+            {
+                <div class="modal-error">@ingredientError</div>
+            }
+            <div class="modal-actions">
+                <button class="btn-primary" @onclick="SaveIngredientAsync">Save</button>
+                <button class="btn-secondary" @onclick="CloseIngredientModal">Cancel</button>
+            </div>
+        </div>
+    </Modal>
+}
+
+@code {
+    [Parameter] public Guid CategoryId { get; set; }
+    [Parameter] public Guid ItemId { get; set; }
+
+    private MasterMenuItem? menuItem;
+    private MasterMenuItem editForm = new();
+    private string categoryName = "";
+    private List<MasterMenuItemComponentView> components = new();
+    private List<MasterInventoryItem> allIngredients = new();
+    private MasterMenuItemComponent componentForm = new();
+
+    private bool loading = true;
+    private bool editMode;
+    private string editError = "";
+
+    private bool ingredientModalOpen;
+    private string ingredientModalTitle = "";
+    private string ingredientError = "";
+    private string ingredientFilter = "";
+
+    private IEnumerable<MasterMenuItemComponentView> FilteredComponents =>
+        string.IsNullOrWhiteSpace(ingredientFilter)
+            ? components
+            : components.Where(c => c.InventoryItemName.Contains(ingredientFilter, StringComparison.OrdinalIgnoreCase));
+
+    // Only show ingredients not already linked to this menu item
+    private IEnumerable<MasterInventoryItem> availableIngredients =>
+        allIngredients.Where(i => !components.Any(c => c.InventoryItemId == i.Id));
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+
+        var allCategories = await AdminService.GetCategoriesAsync();
+        categoryName = allCategories.FirstOrDefault(c => c.Id == CategoryId)?.Name ?? "";
+
+        var allItems = await AdminService.GetMenuItemsAsync();
+        menuItem = allItems.FirstOrDefault(m => m.Id == ItemId);
+
+        components = await AdminService.GetMenuItemComponentsByMenuItemIdAsync(ItemId);
+        allIngredients = await AdminService.GetInventoryItemsAsync();
+
+        loading = false;
+    }
+
+    // ── Item detail edit ──
+
+    private void StartEdit()
+    {
+        if (menuItem == null) return;
+        editForm = new MasterMenuItem
+        {
+            Id = menuItem.Id,
+            IdCategory = menuItem.IdCategory,
+            Name = menuItem.Name,
+            Description = menuItem.Description,
+            Price = menuItem.Price,
+            IsActive = menuItem.IsActive
+        };
+        editError = "";
+        editMode = true;
+    }
+
+    private void CancelEdit()
+    {
+        editMode = false;
+        editError = "";
+    }
+
+    private async Task SaveItemAsync()
+    {
+        if (string.IsNullOrWhiteSpace(editForm.Name))
+        {
+            editError = "Name is required.";
+            return;
+        }
+        await AdminService.UpdateMenuItemAsync(editForm);
+        menuItem = new MasterMenuItem
+        {
+            Id = editForm.Id,
+            IdCategory = editForm.IdCategory,
+            Name = editForm.Name,
+            Description = editForm.Description,
+            Price = editForm.Price,
+            IsActive = editForm.IsActive
+        };
+        editMode = false;
+        editError = "";
+    }
+
+    // ── Ingredient modal ──
+
+    private void OpenAddIngredient()
+    {
+        componentForm = new MasterMenuItemComponent { MenuItemId = ItemId };
+        ingredientModalTitle = "Add Ingredient";
+        ingredientError = "";
+        ingredientModalOpen = true;
+    }
+
+    private void OpenEditIngredient(MasterMenuItemComponentView comp)
+    {
+        componentForm = new MasterMenuItemComponent
+        {
+            Id = comp.Id,
+            MenuItemId = comp.MenuItemId,
+            InventoryItemId = comp.InventoryItemId,
+            Quantity = comp.Quantity
+        };
+        ingredientModalTitle = "Edit Quantity";
+        ingredientError = "";
+        ingredientModalOpen = true;
+    }
+
+    private async Task SaveIngredientAsync()
+    {
+        if (componentForm.InventoryItemId == Guid.Empty)
+        {
+            ingredientError = "Please select an ingredient.";
+            return;
+        }
+        if (componentForm.Quantity <= 0)
+        {
+            ingredientError = "Quantity must be greater than zero.";
+            return;
+        }
+
+        if (componentForm.Id == Guid.Empty)
+            await AdminService.CreateMenuItemComponentAsync(componentForm);
+        else
+            await AdminService.UpdateMenuItemComponentAsync(componentForm);
+
+        CloseIngredientModal();
+        components = await AdminService.GetMenuItemComponentsByMenuItemIdAsync(ItemId);
+    }
+
+    private async Task RemoveIngredientAsync(MasterMenuItemComponentView comp)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"Remove {comp.InventoryItemName} from this recipe?"))
+            return;
+        await AdminService.DeleteMenuItemComponentAsync(comp.Id);
+        components = await AdminService.GetMenuItemComponentsByMenuItemIdAsync(ItemId);
+    }
+
+    private void CloseIngredientModal()
+    {
+        ingredientModalOpen = false;
+        ingredientError = "";
+    }
+
+    private string GetUnit(Guid inventoryItemId)
+        => allIngredients.FirstOrDefault(i => i.Id == inventoryItemId)?.Unit ?? "";
+
+    private string GetIngredientName(Guid inventoryItemId)
+        => allIngredients.FirstOrDefault(i => i.Id == inventoryItemId)?.Name ?? "";
+}

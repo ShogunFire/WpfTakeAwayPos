@@ -1,0 +1,74 @@
+@page "/configure/features"
+@using RestaurantDashboard.Data.Models
+@using RestaurantDashboard.Data.Services
+@inject FeatureOptionsState FeatureState
+
+<PageTitle>Feature Options</PageTitle>
+
+<div class="list-page">
+    <div class="list-page-header">
+        <div>
+            <h1>Feature Options</h1>
+            <p>Enable or disable modules for POS and dashboard behavior.</p>
+        </div>
+    </div>
+
+    @if (!FeatureState.IsLoaded)
+    {
+        <div class="list-loading">Loading feature options...</div>
+    }
+    else
+    {
+        <div class="detail-section">
+            <div class="modal-form">
+                <label class="checkbox-label">
+                    <input type="checkbox" @bind="form.InventoryModuleEnabled" />
+                    Inventory module enabled
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" @bind="form.InventoryCostModuleEnabled" disabled="@(!form.InventoryModuleEnabled)" />
+                    Cost control enabled
+                </label>
+                <div class="modal-actions">
+                    <button class="btn-primary" @onclick="SaveAsync">Save</button>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(statusMessage))
+                {
+                    <div class="status-message">@statusMessage</div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private FeatureOptions form = new();
+    private string statusMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FeatureState.EnsureLoadedAsync();
+        CopyFromState();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (!form.InventoryModuleEnabled)
+        {
+            form.InventoryCostModuleEnabled = false;
+        }
+
+        await FeatureState.SaveAsync(form);
+        CopyFromState();
+        statusMessage = "Feature options updated.";
+    }
+
+    private void CopyFromState()
+    {
+        form = new FeatureOptions
+        {
+            InventoryModuleEnabled = FeatureState.Current.InventoryModuleEnabled,
+            InventoryCostModuleEnabled = FeatureState.Current.InventoryCostModuleEnabled
+        };
+    }
+}

@@ -2,28 +2,20 @@
 @using RestaurantDashboard.Data.Models
 @using RestaurantDashboard.Data.Services
 @inject AnalyticsService Analytics
+@inject ReportFilterState ReportFilters
+@inject FeatureOptionsState FeatureState
 @rendermode InteractiveServer
+@implements IDisposable
 
 <div class="dashboard-container">
     <div class="dashboard-header">
         <h1>Sales Dashboard</h1>
         <div class="filters">
-            <select @bind="selectedLocationId" @bind:after="LoadDataAsync">
-                <option value="">All Locations</option>
-                @foreach (var location in locations)
-                {
-                    <option value="@location.Id">@location.Name</option>
-                }
-            </select>
             <select @bind="interval" @bind:after="LoadDataAsync">
                 <option value="day">Daily</option>
                 <option value="week">Weekly</option>
                 <option value="month">Monthly</option>
             </select>
-            <input type="date" @bind="startDate" @bind:after="LoadDataAsync" />
-            <span>to</span>
-            <input type="date" @bind="endDate" @bind:after="LoadDataAsync" />
-            <button class="btn-primary" @onclick="LoadDataAsync">Refresh</button>
         </div>
     </div>
 
@@ -38,18 +30,21 @@
                 <div class="metric-label">Total Revenue</div>
                 <div class="metric-value positive">$@totalRevenue.ToString("N2")</div>
             </div>
-            <div class="metric-card">
-                <div class="metric-label">Total Cost</div>
-                <div class="metric-value">$@totalCost.ToString("N2")</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-label">Total Profit</div>
-                <div class="metric-value positive">$@totalProfit.ToString("N2")</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-label">Profit Margin</div>
-                <div class="metric-value">@(totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).ToString("N1") : "0")%</div>
-            </div>
+            @if (FeatureState.Current.InventoryCostModuleEnabled)
+            {
+                <div class="metric-card">
+                    <div class="metric-label">Total Cost</div>
+                    <div class="metric-value">$@totalCost.ToString("N2")</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Total Profit</div>
+                    <div class="metric-value positive">$@totalProfit.ToString("N2")</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Profit Margin</div>
+                    <div class="metric-value">@(totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).ToString("N1") : "0")%</div>
+                </div>
+            }
         </div>
 
         @if (salesData.Any())
@@ -84,11 +79,14 @@
                                 <polyline class="line revenue" points="@string.Join(" ", points.Select((p, i) => 
                                     $"{padding + (i * pointSpacing)},{padding + chartHeight - (p.TotalRevenue * yScale)}"))"/>
                                 
-                                <polyline class="line cost" points="@string.Join(" ", points.Select((p, i) => 
-                                    $"{padding + (i * pointSpacing)},{padding + chartHeight - (p.TotalCost * yScale)}"))"/>
-                                
-                                <polyline class="line profit" points="@string.Join(" ", points.Select((p, i) => 
-                                    $"{padding + (i * pointSpacing)},{padding + chartHeight - (p.TotalProfit * yScale)}"))"/>
+                                @if (FeatureState.Current.InventoryCostModuleEnabled)
+                                {
+                                    <polyline class="line cost" points="@string.Join(" ", points.Select((p, i) => 
+                                        $"{padding + (i * pointSpacing)},{padding + chartHeight - (p.TotalCost * yScale)}"))"/>
+
+                                    <polyline class="line profit" points="@string.Join(" ", points.Select((p, i) => 
+                                        $"{padding + (i * pointSpacing)},{padding + chartHeight - (p.TotalProfit * yScale)}"))"/>
+                                }
                                 
                                 @foreach (var (p, i) in points.Select((p, i) => (p, i)))
                                 {
@@ -97,18 +95,21 @@
                                     <circle class="point revenue" cx="@x" cy="@y" r="4"/>
                                 }
                                 
-                                @foreach (var (p, i) in points.Select((p, i) => (p, i)))
+                                @if (FeatureState.Current.InventoryCostModuleEnabled)
                                 {
-                                    var x = padding + (i * pointSpacing);
-                                    var y = padding + chartHeight - (p.TotalCost * yScale);
-                                    <circle class="point cost" cx="@x" cy="@y" r="4"/>
-                                }
-                                
-                                @foreach (var (p, i) in points.Select((p, i) => (p, i)))
-                                {
-                                    var x = padding + (i * pointSpacing);
-                                    var y = padding + chartHeight - (p.TotalProfit * yScale);
-                                    <circle class="point profit" cx="@x" cy="@y" r="4"/>
+                                    @foreach (var (p, i) in points.Select((p, i) => (p, i)))
+                                    {
+                                        var x = padding + (i * pointSpacing);
+                                        var y = padding + chartHeight - (p.TotalCost * yScale);
+                                        <circle class="point cost" cx="@x" cy="@y" r="4"/>
+                                    }
+
+                                    @foreach (var (p, i) in points.Select((p, i) => (p, i)))
+                                    {
+                                        var x = padding + (i * pointSpacing);
+                                        var y = padding + chartHeight - (p.TotalProfit * yScale);
+                                        <circle class="point profit" cx="@x" cy="@y" r="4"/>
+                                    }
                                 }
                                 
                                 <line x1="@padding" y1="@padding" x2="@padding" y2="@(400 - padding)" stroke="#333" stroke-width="2"/>
@@ -130,14 +131,17 @@
                         <span class="legend-color revenue"></span>
                         <span>Revenue</span>
                     </div>
-                    <div class="legend-item">
-                        <span class="legend-color cost"></span>
-                        <span>Cost</span>
-                    </div>
-                    <div class="legend-item">
-                        <span class="legend-color profit"></span>
-                        <span>Profit</span>
-                    </div>
+                    @if (FeatureState.Current.InventoryCostModuleEnabled)
+                    {
+                        <div class="legend-item">
+                            <span class="legend-color cost"></span>
+                            <span>Cost</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color profit"></span>
+                            <span>Profit</span>
+                        </div>
+                    }
                 </div>
             </div>
 
@@ -150,9 +154,12 @@
                                 <th>Period</th>
                                 <th>Orders</th>
                                 <th>Revenue</th>
-                                <th>Cost</th>
-                                <th>Profit</th>
-                                <th>Profit %</th>
+                                @if (FeatureState.Current.InventoryCostModuleEnabled)
+                                {
+                                    <th>Cost</th>
+                                    <th>Profit</th>
+                                    <th>Profit %</th>
+                                }
                                 <th>Avg Order</th>
                             </tr>
                         </thead>
@@ -164,9 +171,12 @@
                                     <td>@FormatPeriod(data.Period)</td>
                                     <td>@data.OrderCount.ToString("N0")</td>
                                     <td>$@data.TotalRevenue.ToString("N2")</td>
-                                    <td>$@data.TotalCost.ToString("N2")</td>
-                                    <td class="@(data.TotalProfit >= 0 ? "positive" : "negative")">$@data.TotalProfit.ToString("N2")</td>
-                                    <td class="@(profitPercent >= 0 ? "positive" : "negative")">@profitPercent.ToString("N1")%</td>
+                                    @if (FeatureState.Current.InventoryCostModuleEnabled)
+                                    {
+                                        <td>$@data.TotalCost.ToString("N2")</td>
+                                        <td class="@(data.TotalProfit >= 0 ? "positive" : "negative")">$@data.TotalProfit.ToString("N2")</td>
+                                        <td class="@(profitPercent >= 0 ? "positive" : "negative")">@profitPercent.ToString("N1")%</td>
+                                    }
                                     <td>$@data.AverageOrderValue.ToString("N2")</td>
                                 </tr>
                             }
@@ -176,9 +186,12 @@
                                 <td><strong>Total</strong></td>
                                 <td><strong>@totalOrders.ToString("N0")</strong></td>
                                 <td><strong>$@totalRevenue.ToString("N2")</strong></td>
-                                <td><strong>$@totalCost.ToString("N2")</strong></td>
-                                <td><strong>$@totalProfit.ToString("N2")</strong></td>
-                                <td><strong>@(totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).ToString("N1") : "0")%</strong></td>
+                                @if (FeatureState.Current.InventoryCostModuleEnabled)
+                                {
+                                    <td><strong>$@totalCost.ToString("N2")</strong></td>
+                                    <td><strong>$@totalProfit.ToString("N2")</strong></td>
+                                    <td><strong>@(totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).ToString("N1") : "0")%</strong></td>
+                                }
                                 <td><strong>$@(totalOrders > 0 ? (totalRevenue / totalOrders).ToString("N2") : "0.00")</strong></td>
                             </tr>
                         </tfoot>
@@ -519,11 +532,7 @@
 </style>
 
 @code {
-    private List<Location> locations = new();
-    private string selectedLocationId = "";
     private string interval = "day";
-    private DateTime startDate = DateTime.Today.AddDays(-30);
-    private DateTime endDate = DateTime.Today.AddDays(1);
     private bool isLoading = false;
     
     private List<SalesDataPoint> salesData = new();
@@ -534,7 +543,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        locations = await Analytics.GetLocationsAsync();
+        await FeatureState.EnsureLoadedAsync();
+        ReportFilters.FiltersChanged += LoadDataAsync;
         await LoadDataAsync();
     }
 
@@ -545,8 +555,8 @@
 
         try
         {
-            var locationId = string.IsNullOrEmpty(selectedLocationId) ? (Guid?)null : Guid.Parse(selectedLocationId);
-            salesData = await Analytics.GetSalesOverTimeAsync(startDate, endDate, locationId, interval);
+            var locationId = string.IsNullOrEmpty(ReportFilters.SelectedLocationId) ? (Guid?)null : Guid.Parse(ReportFilters.SelectedLocationId);
+            salesData = await Analytics.GetSalesOverTimeAsync(ReportFilters.StartDate, ReportFilters.EndDate, locationId, interval);
             
             totalRevenue = salesData.Sum(d => d.TotalRevenue);
             totalCost = salesData.Sum(d => d.TotalCost);
@@ -572,5 +582,10 @@
             };
         }
         return period;
+    }
+
+    public void Dispose()
+    {
+        ReportFilters.FiltersChanged -= LoadDataAsync;
     }
 }}

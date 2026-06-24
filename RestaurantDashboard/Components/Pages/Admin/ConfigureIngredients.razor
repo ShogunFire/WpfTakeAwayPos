@@ -1,0 +1,169 @@
+@page "/configure/ingredients"
+@using RestaurantDashboard.Data.Models
+@using RestaurantDashboard.Data.Services
+@inject IMasterDataAdminService AdminService
+@inject FeatureOptionsState FeatureState
+
+<PageTitle>Ingredients</PageTitle>
+
+<div class="list-page">
+    @if (FeatureState.IsLoaded && !FeatureState.Current.InventoryModuleEnabled)
+    {
+        <div class="detail-section">
+            <h2>Ingredients are unavailable</h2>
+            <p>Enable the Inventory module in Feature Options to manage ingredients.</p>
+        </div>
+    }
+    else
+    {
+        <div class="list-page-header">
+            <div>
+                <h1>Ingredients</h1>
+                <p>Manage ingredients used by recipes. Unit cost is computed from POS purchase history.</p>
+            </div>
+            <button class="btn-add" @onclick="OpenAdd">+ Add</button>
+        </div>
+
+        <div class="list-filter">
+            <input type="text" @bind="search" @bind:event="oninput" placeholder="🔍  Filter ingredients…" />
+        </div>
+
+        <div class="list-table-panel">
+        @foreach (var item in FilteredItems.OrderBy(i => i.Name))
+        {
+            <div class="list-row list-row-static">
+                <div class="list-row-main">
+                    <strong>@item.Name</strong>
+                    <span class="list-row-sub">@item.Unit • $@item.CurrentUnitCost.ToString("0.00##") per unit</span>
+                </div>
+                <div class="list-row-actions">
+                    <button class="btn-icon" title="Edit" @onclick="() => OpenEdit(item)">✏️</button>
+                </div>
+            </div>
+        }
+        @if (!FilteredItems.Any() && !loading)
+        {
+            <div class="list-empty">No ingredients found.</div>
+        }
+        </div>
+    }
+</div>
+
+<Modal IsVisible="@(modalOpen && FeatureState.Current.InventoryModuleEnabled)" Title="@modalTitle" OnClose="CloseModal">
+    <div class="modal-form">
+        <div>
+            <label>Name</label>
+            <input type="text" @bind="form.Name" placeholder="e.g. Beef Patty" />
+        </div>
+        <div>
+            <label>Unit</label>
+            <input type="text" @bind="form.Unit" placeholder="e.g. kg, unit, L" />
+        </div>
+        @if (form.Id != Guid.Empty)
+        {
+            <div>
+                <label>Current Unit Cost ($)</label>
+                <p class="modal-readonly-value">@form.CurrentUnitCost.ToString("0.00##")</p>
+            </div>
+        }
+        <p class="list-row-sub">Unit cost is calculated automatically from ingredient purchases recorded in POS.</p>
+        @if (!string.IsNullOrWhiteSpace(formError))
+        {
+            <div class="modal-error">@formError</div>
+        }
+        <div class="modal-actions">
+            <button class="btn-primary" @onclick="SaveAsync">Save</button>
+            <button class="btn-secondary" @onclick="CloseModal">Cancel</button>
+        </div>
+    </div>
+</Modal>
+
+@code {
+    private List<MasterInventoryItem> items = new();
+    private MasterInventoryItem form = new();
+    private string search = string.Empty;
+    private bool loading = true;
+    private bool modalOpen;
+    private string modalTitle = string.Empty;
+    private string formError = string.Empty;
+
+    private IEnumerable<MasterInventoryItem> FilteredItems =>
+        string.IsNullOrWhiteSpace(search)
+            ? items
+            : items.Where(i => i.Name.Contains(search, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FeatureState.EnsureLoadedAsync();
+
+        if (!FeatureState.Current.InventoryModuleEnabled)
+        {
+            loading = false;
+            return;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        items = await AdminService.GetInventoryItemsAsync();
+        loading = false;
+    }
+
+    private void OpenAdd()
+    {
+        form = new MasterInventoryItem();
+        modalTitle = "Add Ingredient";
+        formError = string.Empty;
+        modalOpen = true;
+    }
+
+    private void OpenEdit(MasterInventoryItem item)
+    {
+        form = new MasterInventoryItem
+        {
+            Id = item.Id,
+            Name = item.Name,
+            Unit = item.Unit,
+            CurrentUnitCost = item.CurrentUnitCost
+        };
+        modalTitle = "Edit Ingredient";
+        formError = string.Empty;
+        modalOpen = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(form.Name))
+        {
+            formError = "Name is required.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(form.Unit))
+        {
+            formError = "Unit is required (e.g. kg, unit, L).";
+            return;
+        }
+
+        if (form.Id == Guid.Empty)
+        {
+            await AdminService.CreateInventoryItemAsync(form);
+        }
+        else
+        {
+            await AdminService.UpdateInventoryItemAsync(form);
+        }
+
+        CloseModal();
+        await LoadAsync();
+    }
+
+    private void CloseModal()
+    {
+        modalOpen = false;
+        formError = string.Empty;
+    }
+}

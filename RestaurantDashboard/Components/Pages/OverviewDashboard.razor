@@ -2,24 +2,14 @@
 @using RestaurantDashboard.Data.Models
 @using RestaurantDashboard.Data.Services
 @inject AnalyticsService Analytics
+@inject ReportFilterState ReportFilters
+@inject FeatureOptionsState FeatureState
 @rendermode InteractiveServer
+@implements IDisposable
 
 <div class="dashboard-container">
     <div class="dashboard-header">
         <h1>Overview Dashboard</h1>
-        <div class="filters">
-            <select @bind="selectedLocationId" @bind:after="LoadDataAsync">
-                <option value="">All Locations</option>
-                @foreach (var location in locations)
-                {
-                    <option value="@location.Id">@location.Name</option>
-                }
-            </select>
-            <input type="date" @bind="startDate" @bind:after="LoadDataAsync" />
-            <span>to</span>
-            <input type="date" @bind="endDate" @bind:after="LoadDataAsync" />
-            <button class="btn-primary" @onclick="LoadDataAsync">Refresh</button>
-        </div>
     </div>
 
     @if (isLoading)
@@ -37,22 +27,25 @@
                 <div class="metric-label">Total Revenue</div>
                 <div class="metric-value positive">$@revenueCost.TotalRevenue.ToString("N2")</div>
             </div>
-            <div class="metric-card">
-                <div class="metric-label">Total Cost</div>
-                <div class="metric-value negative">$@revenueCost.TotalCost.ToString("N2")</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-label">Gross Profit</div>
-                <div class="metric-value @(revenueCost.GrossProfit >= 0 ? "positive" : "negative")">
-                    $@revenueCost.GrossProfit.ToString("N2")
+            @if (FeatureState.Current.InventoryCostModuleEnabled)
+            {
+                <div class="metric-card">
+                    <div class="metric-label">Total Cost</div>
+                    <div class="metric-value negative">$@revenueCost.TotalCost.ToString("N2")</div>
                 </div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-label">Profit Margin</div>
-                <div class="metric-value @(revenueCost.ProfitMargin >= 0 ? "positive" : "negative")">
-                    @revenueCost.ProfitMargin.ToString("N2")%
+                <div class="metric-card">
+                    <div class="metric-label">Gross Profit</div>
+                    <div class="metric-value @(revenueCost.GrossProfit >= 0 ? "positive" : "negative")">
+                        $@revenueCost.GrossProfit.ToString("N2")
+                    </div>
                 </div>
-            </div>
+                <div class="metric-card">
+                    <div class="metric-label">Profit Margin</div>
+                    <div class="metric-value @(revenueCost.ProfitMargin >= 0 ? "positive" : "negative")">
+                        @revenueCost.ProfitMargin.ToString("N2")%
+                    </div>
+                </div>
+            }
         </div>
 
         @if (locationPerformance != null && locationPerformance.Any())
@@ -218,10 +211,6 @@
 </style>
 
 @code {
-    private List<Location> locations = new();
-    private string selectedLocationId = "";
-    private DateTime startDate = DateTime.Today.AddDays(-30);
-    private DateTime endDate = DateTime.Today.AddDays(1);
     private bool isLoading = false;
     
     private OverviewMetrics? metrics;
@@ -230,7 +219,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        locations = await Analytics.GetLocationsAsync();
+        await FeatureState.EnsureLoadedAsync();
+        ReportFilters.FiltersChanged += LoadDataAsync;
         await LoadDataAsync();
     }
 
@@ -241,15 +231,15 @@
 
         try
         {
-            var locationId = string.IsNullOrEmpty(selectedLocationId) ? (Guid?)null : Guid.Parse(selectedLocationId);
+            var locationId = string.IsNullOrEmpty(ReportFilters.SelectedLocationId) ? (Guid?)null : Guid.Parse(ReportFilters.SelectedLocationId);
             
-            metrics = await Analytics.GetOverviewMetricsAsync(startDate, endDate, locationId);
-            revenueCost = await Analytics.GetRevenueCostAnalysisAsync(startDate, endDate, locationId);
+            metrics = await Analytics.GetOverviewMetricsAsync(ReportFilters.StartDate, ReportFilters.EndDate, locationId);
+            revenueCost = await Analytics.GetRevenueCostAnalysisAsync(ReportFilters.StartDate, ReportFilters.EndDate, locationId);
             
             // Only show location performance when viewing all locations
             if (!locationId.HasValue)
             {
-                locationPerformance = await Analytics.GetLocationPerformanceAsync(startDate, endDate);
+                locationPerformance = await Analytics.GetLocationPerformanceAsync(ReportFilters.StartDate, ReportFilters.EndDate);
             }
             else
             {
@@ -261,5 +251,10 @@
             isLoading = false;
             StateHasChanged();
         }
+    }
+
+    public void Dispose()
+    {
+        ReportFilters.FiltersChanged -= LoadDataAsync;
     }
 }

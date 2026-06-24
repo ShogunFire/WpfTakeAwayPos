@@ -1,0 +1,141 @@
+@page "/configure/menu"
+@using RestaurantDashboard.Data.Models
+@using RestaurantDashboard.Data.Services
+@using RestaurantDashboard.Components.Shared
+@inject IMasterDataAdminService AdminService
+@inject NavigationManager Nav
+
+<PageTitle>Categories</PageTitle>
+
+<div class="list-page">
+    <div class="list-page-header">
+        <div>
+            <h1>Categories</h1>
+            <p>Click a category to open MenuItems with that category pre-filtered.</p>
+        </div>
+        <button class="btn-add" @onclick="OpenAdd">+ Add</button>
+    </div>
+
+    <div class="list-filter">
+        <input type="text" @bind="filter" @bind:event="oninput" placeholder="🔍  Filter categories…" />
+    </div>
+
+    <div class="list-table-panel">
+        @foreach (var cat in Filtered)
+        {
+            <div class="list-row" @onclick="() => GoToCategory(cat.Id)">
+                <div class="list-row-main">
+                    <strong>@cat.Name</strong>
+                    @if (!string.IsNullOrWhiteSpace(cat.Description))
+                    {
+                        <span class="list-row-sub">@cat.Description</span>
+                    }
+                </div>
+                <div class="list-row-actions" @onclick:stopPropagation="true">
+                    <span class="badge @(cat.IsActive ? "badge-active" : "badge-inactive")">
+                        @(cat.IsActive ? "Active" : "Inactive")
+                    </span>
+                    <button class="btn-icon" title="Edit" @onclick="() => OpenEdit(cat)">✏️</button>
+                </div>
+            </div>
+        }
+        @if (!Filtered.Any() && !loading)
+        {
+            <div class="list-empty">No categories found. Add one to get started.</div>
+        }
+    </div>
+</div>
+
+<Modal IsVisible="modalOpen" Title="@modalTitle" OnClose="CloseModal">
+    <div class="modal-form">
+        <div>
+            <label>Name</label>
+            <input type="text" @bind="form.Name" placeholder="e.g. Burgers" />
+        </div>
+        <div>
+            <label>Description</label>
+            <input type="text" @bind="form.Description" placeholder="Optional" />
+        </div>
+        <div>
+            <label class="checkbox-label">
+                <input type="checkbox" @bind="form.IsActive" /> Active
+            </label>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(formError))
+        {
+            <div class="modal-error">@formError</div>
+        }
+        <div class="modal-actions">
+            <button class="btn-primary" @onclick="SaveAsync">Save</button>
+            <button class="btn-secondary" @onclick="CloseModal">Cancel</button>
+        </div>
+    </div>
+</Modal>
+
+@code {
+    private List<MasterCategory> items = new();
+    private MasterCategory form = new() { IsActive = true };
+    private string filter = "";
+    private bool modalOpen;
+    private string modalTitle = "";
+    private string formError = "";
+    private bool loading = true;
+
+    private IEnumerable<MasterCategory> Filtered =>
+        string.IsNullOrWhiteSpace(filter)
+            ? items
+            : items.Where(c => c.Name.Contains(filter, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        items = await AdminService.GetCategoriesAsync();
+        loading = false;
+    }
+
+    private void OpenAdd()
+    {
+        form = new MasterCategory { IsActive = true };
+        modalTitle = "Add Category";
+        formError = "";
+        modalOpen = true;
+    }
+
+    private void OpenEdit(MasterCategory cat)
+    {
+        form = new MasterCategory
+        {
+            Id = cat.Id,
+            Name = cat.Name,
+            Description = cat.Description,
+            IsActive = cat.IsActive
+        };
+        modalTitle = "Edit Category";
+        formError = "";
+        modalOpen = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(form.Name))
+        {
+            formError = "Name is required.";
+            return;
+        }
+
+        if (form.Id == Guid.Empty)
+            await AdminService.CreateCategoryAsync(form);
+        else
+            await AdminService.UpdateCategoryAsync(form);
+
+        CloseModal();
+        items = await AdminService.GetCategoriesAsync();
+    }
+
+    private void CloseModal()
+    {
+        modalOpen = false;
+        formError = "";
+    }
+
+    private void GoToCategory(Guid id) => Nav.NavigateTo("/configure/menu-items?categoryId=" + id);
+}

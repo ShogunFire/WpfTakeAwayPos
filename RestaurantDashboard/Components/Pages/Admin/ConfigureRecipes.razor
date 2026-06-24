@@ -1,0 +1,208 @@
+@page "/configure/recipes"
+@using RestaurantDashboard.Data.Models
+@using RestaurantDashboard.Data.Services
+@inject IMasterDataAdminService AdminService
+
+<PageTitle>Recipes</PageTitle>
+
+<div class="admin-page">
+    <div class="admin-page-header">
+        <h1>Recipes</h1>
+        <p>Link ingredients to menu items with quantities. This defines the recipe used for COGS calculation.</p>
+    </div>
+
+    <div class="admin-form-panel">
+        <h3>@(form.Id == Guid.Empty ? "Add Recipe Component" : "Edit Recipe Component")</h3>
+
+        <div class="form-row">
+            <label>Menu Item</label>
+            <select @bind="form.MenuItemId">
+                <option value="@Guid.Empty">— Select menu item —</option>
+                @foreach (var item in menuItems.Where(m => m.IsActive).OrderBy(m => m.Name))
+                {
+                    <option value="@item.Id">@item.Name</option>
+                }
+            </select>
+        </div>
+        <div class="form-row">
+            <label>Ingredient</label>
+            <select @bind="form.InventoryItemId">
+                <option value="@Guid.Empty">— Select ingredient —</option>
+                @foreach (var item in ingredients.OrderBy(i => i.Name))
+                {
+                    <option value="@item.Id">@item.Name (@item.Unit)</option>
+                }
+            </select>
+        </div>
+        <div class="form-row">
+            <label>Quantity</label>
+            <input type="number" step="0.0001" min="0.0001" @bind="form.Quantity" placeholder="0.000" />
+        </div>
+
+        <div class="form-actions">
+            <button class="btn-primary" @onclick="SaveAsync">
+                @(form.Id == Guid.Empty ? "Add to Recipe" : "Save Changes")
+            </button>
+            @if (form.Id != Guid.Empty)
+            {
+                <button class="btn-secondary" @onclick="Reset">Cancel</button>
+            }
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(statusMessage))
+        {
+            <div class="status-message">@statusMessage</div>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(filterMenuItemId))
+    {
+        <div style="margin-bottom: 8px; display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 14px; color: #64748b;">Showing recipe for: <strong>@GetMenuItemName(filterMenuItemId)</strong></span>
+            <button class="btn-secondary" style="padding: 4px 10px; font-size: 13px;" @onclick="ClearFilter">Show All</button>
+        </div>
+    }
+
+    <div class="admin-table-panel">
+        @if (components.Count == 0 && !loading)
+        {
+            <div style="padding: 32px; text-align: center; color: #94a3b8;">No recipe components yet. Add one above.</div>
+        }
+        else
+        {
+            var visible = string.IsNullOrEmpty(filterMenuItemId)
+                ? components
+                : components.Where(c => c.MenuItemId.ToString() == filterMenuItemId).ToList();
+
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Menu Item</th>
+                        <th>Ingredient</th>
+                        <th>Quantity</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in visible.OrderBy(c => c.MenuItemName).ThenBy(c => c.InventoryItemName))
+                    {
+                        <tr class="@(item.Id == form.Id ? "row-editing" : "")">
+                            <td>
+                                <button class="btn-filter-name" @onclick="() => FilterByMenuItem(item.MenuItemId.ToString())">
+                                    @item.MenuItemName
+                                </button>
+                            </td>
+                            <td>@item.InventoryItemName</td>
+                            <td>@item.Quantity.ToString("0.####")</td>
+                            <td><button class="btn-edit" @onclick="() => Edit(item)">Edit</button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<style>
+    .btn-filter-name {
+        background: none;
+        border: none;
+        padding: 0;
+        font-size: 14px;
+        color: #0f766e;
+        cursor: pointer;
+        font-weight: 500;
+        text-decoration: underline dotted;
+    }
+    .btn-filter-name:hover { color: #0d6b63; }
+</style>
+
+@code {
+    private List<MasterMenuItemComponentView> components = new();
+    private List<MasterMenuItem> menuItems = new();
+    private List<MasterInventoryItem> ingredients = new();
+    private MasterMenuItemComponent form = new();
+    private string statusMessage = string.Empty;
+    private string filterMenuItemId = string.Empty;
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        components = await AdminService.GetMenuItemComponentsAsync();
+        menuItems = await AdminService.GetMenuItemsAsync();
+        ingredients = await AdminService.GetInventoryItemsAsync();
+        loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (form.MenuItemId == Guid.Empty)
+        {
+            statusMessage = "Please select a menu item.";
+            return;
+        }
+
+        if (form.InventoryItemId == Guid.Empty)
+        {
+            statusMessage = "Please select an ingredient.";
+            return;
+        }
+
+        if (form.Quantity <= 0)
+        {
+            statusMessage = "Quantity must be greater than zero.";
+            return;
+        }
+
+        if (form.Id == Guid.Empty)
+        {
+            await AdminService.CreateMenuItemComponentAsync(form);
+            statusMessage = "Recipe component added.";
+        }
+        else
+        {
+            await AdminService.UpdateMenuItemComponentAsync(form);
+            statusMessage = "Recipe component updated.";
+        }
+
+        Reset();
+        await LoadAsync();
+    }
+
+    private void Edit(MasterMenuItemComponentView item)
+    {
+        form = new MasterMenuItemComponent
+        {
+            Id = item.Id,
+            MenuItemId = item.MenuItemId,
+            InventoryItemId = item.InventoryItemId,
+            Quantity = item.Quantity
+        };
+        statusMessage = string.Empty;
+    }
+
+    private void FilterByMenuItem(string id)
+    {
+        filterMenuItemId = id;
+    }
+
+    private void ClearFilter()
+    {
+        filterMenuItemId = string.Empty;
+    }
+
+    private void Reset()
+    {
+        form = new MasterMenuItemComponent();
+        statusMessage = string.Empty;
+    }
+
+    private string GetMenuItemName(string id)
+        => menuItems.FirstOrDefault(m => m.Id.ToString() == id)?.Name ?? "—";
+}
